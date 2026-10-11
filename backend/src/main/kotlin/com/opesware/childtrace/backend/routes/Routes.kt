@@ -1,7 +1,11 @@
 package com.opesware.childtrace.backend.routes
 
 import com.opesware.childtrace.backend.plugins.ProvisioningRefusedException
+import com.opesware.childtrace.backend.repo.AuditAction
+import com.opesware.childtrace.backend.repo.AuditEntry
+import com.opesware.childtrace.backend.repo.AuditResource
 import com.opesware.childtrace.backend.repo.Store
+import io.ktor.server.application.ApplicationCall
 import com.opesware.childtrace.shared.api.AcceptedResponse
 import com.opesware.childtrace.shared.api.ActivityBatch
 import com.opesware.childtrace.shared.api.AlertBatch
@@ -45,18 +49,26 @@ fun Route.pairingRoutes(store: Store) {
     }
 }
 
+/** The actor responsible for a request, for the audit trail. */
+private fun ApplicationCall.actor(): String = request.headers["X-Actor"] ?: "unknown"
+
 /** Child device pushes flagged alerts; parent app reads the ranked feed. */
 fun Route.alertRoutes(store: Store) {
     post(Endpoints.ALERTS) {
         val batch = call.receive<AlertBatch>()
         store.addAlerts(batch.childId, batch.alerts)
+        store.recordAccess(audit(call, AuditAction.WRITE, AuditResource.ALERT, batch.childId, "${batch.alerts.size} alerts"))
         call.respond(HttpStatusCode.Accepted, AcceptedResponse(batch.alerts.size))
     }
     get("/api/v1/children/{childId}/alerts") {
         val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
+        store.recordAccess(audit(call, AuditAction.READ, AuditResource.ALERT, childId))
         call.respond(store.alerts(childId))
     }
 }
+
+private fun audit(call: ApplicationCall, action: AuditAction, resource: AuditResource, childId: String, detail: String? = null) =
+    AuditEntry(System.currentTimeMillis(), call.actor(), action, resource, childId, detail)
 
 /**
  * Comprehensive (visible) activity sync. Content arrives already encrypted at
@@ -67,10 +79,12 @@ fun Route.activityRoutes(store: Store) {
     post(Endpoints.ACTIVITY) {
         val batch = call.receive<ActivityBatch>()
         store.addActivity(batch.childId, batch.activity)
+        store.recordAccess(audit(call, AuditAction.WRITE, AuditResource.ACTIVITY, batch.childId, "${batch.activity.size} records"))
         call.respond(HttpStatusCode.Accepted, AcceptedResponse(batch.activity.size))
     }
     get("/api/v1/children/{childId}/activity") {
         val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
+        store.recordAccess(audit(call, AuditAction.READ, AuditResource.ACTIVITY, childId))
         call.respond(store.activity(childId))
     }
 }
@@ -102,6 +116,7 @@ fun Route.consentRoutes(store: Store) {
                     childAgeAtProvisioning = req.childAge,
                 )
                 store.saveConsent(record)
+                store.recordAccess(audit(call, AuditAction.WRITE, AuditResource.CONSENT, req.childId))
                 call.respond(HttpStatusCode.Created, mapOf("band" to result.band.name, "childId" to req.childId))
             }
         }

@@ -19,6 +19,7 @@ class InMemoryStore : Store {
     private val consents = ConcurrentHashMap<String, ConsentRecord>()
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
+    private val audit = ConcurrentHashMap<String, MutableList<AuditEntry>>()
 
     override fun saveDevice(device: Device) { devices[device.id] = device }
     override fun device(id: String): Device? = devices[id]
@@ -41,4 +42,26 @@ class InMemoryStore : Store {
             compareByDescending<ActivityRecord> { it.isFlagged }
                 .thenByDescending { it.createdAtEpochMillis }
         )
+
+    override fun recordAccess(entry: AuditEntry) {
+        audit.getOrPut(entry.childId) { mutableListOf() }.add(entry)
+    }
+
+    override fun auditTrail(childId: String): List<AuditEntry> =
+        audit[childId].orEmpty().sortedByDescending { it.atEpochMillis }
+
+    override fun pruneOlderThan(cutoffEpochMillis: Long): Int {
+        var removed = 0
+        alerts.values.forEach { list ->
+            val before = list.size
+            list.removeAll { it.createdAtEpochMillis < cutoffEpochMillis }
+            removed += before - list.size
+        }
+        activity.values.forEach { list ->
+            val before = list.size
+            list.removeAll { it.createdAtEpochMillis < cutoffEpochMillis }
+            removed += before - list.size
+        }
+        return removed
+    }
 }

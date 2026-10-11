@@ -58,3 +58,14 @@ object Activities : Table("activities") {
     val severity = varchar("severity", 16).nullable()
     override val primaryKey = PrimaryKey(id)
 }
+
+object AuditLog : Table("audit_log") {
+    val id = long("id").autoIncrement()
+    val at = long("at")
+    val actor = varchar("actor", 128)
+    val action = varchar("action", 8)
+    val resource = varchar("resource", 16)
+    val childId = varchar("child_id", 64).index()
+    val detail = varchar("detail", 512).nullable()
+    override val primaryKey = PrimaryKey(id)
+}

@@ -27,4 +27,16 @@ interface Store {
     fun addActivity(childId: String, items: List<ActivityRecord>)
     /** Activity for a child, flagged items first then most recent. */
     fun activity(childId: String): List<ActivityRecord>
+
+    /** Append an access-audit entry (invariant 3). */
+    fun recordAccess(entry: AuditEntry)
+    /** Audit trail for a child, most recent first. */
+    fun auditTrail(childId: String): List<AuditEntry>
+
+    /**
+     * Delete alerts and activity older than [cutoffEpochMillis]. Consent records
+     * are retained (the accountability anchor) and not pruned here. Returns the
+     * number of rows removed.
+     */
+    fun pruneOlderThan(cutoffEpochMillis: Long): Int
 }

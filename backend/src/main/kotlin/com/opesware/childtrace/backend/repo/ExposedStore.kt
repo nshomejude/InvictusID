@@ -14,6 +14,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -39,7 +40,7 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         }
         db = Database.connect(HikariDataSource(cfg))
         transaction(db) {
-            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities)
+            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog)
         }
     }
 
@@ -159,5 +160,38 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
                 compareByDescending<ActivityRecord> { it.isFlagged }
                     .thenByDescending { it.createdAtEpochMillis }
             )
+    }
+
+    override fun recordAccess(entry: AuditEntry) = transaction(db) {
+        AuditLog.insert {
+            it[at] = entry.atEpochMillis
+            it[actor] = entry.actor
+            it[action] = entry.action.name
+            it[resource] = entry.resource.name
+            it[childId] = entry.childId
+            it[detail] = entry.detail
+        }
+        Unit
+    }
+
+    override fun auditTrail(childId: String): List<AuditEntry> = transaction(db) {
+        AuditLog.selectAll().where { AuditLog.childId eq childId }
+            .orderBy(AuditLog.at to SortOrder.DESC)
+            .map {
+                AuditEntry(
+                    atEpochMillis = it[AuditLog.at],
+                    actor = it[AuditLog.actor],
+                    action = AuditAction.valueOf(it[AuditLog.action]),
+                    resource = AuditResource.valueOf(it[AuditLog.resource]),
+                    childId = it[AuditLog.childId],
+                    detail = it[AuditLog.detail],
+                )
+            }
+    }
+
+    override fun pruneOlderThan(cutoffEpochMillis: Long): Int = transaction(db) {
+        val a = Alerts.deleteWhere { Alerts.createdAt less cutoffEpochMillis }
+        val b = Activities.deleteWhere { Activities.createdAt less cutoffEpochMillis }
+        a + b
     }
 }

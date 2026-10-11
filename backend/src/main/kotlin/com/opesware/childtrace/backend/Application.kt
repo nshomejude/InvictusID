@@ -46,6 +46,9 @@ fun Application.module() {
     configureSerialization()
     configureStatusPages()
 
+    // Bounded retention: expire alerts/activity past the window (invariant 3).
+    RetentionScheduler(store).start()
+
     routing {
         healthRoutes()
         pairingRoutes(store)
