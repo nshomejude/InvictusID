@@ -21,15 +21,28 @@ These are product invariants. Do not implement anything that violates them, and 
 
 If a change request conflicts with any of the above, stop and raise it rather than implementing it.
 
-## Architecture (planned)
+**Note on per-app visibility (WhatsApp, Snapchat, Telegram, Instagram, TikTok).** The Child app analyzes messages from these apps *on the device*. The Parent app may show a per-app view (an "Activity by app" screen) that surfaces, per app, the **count and severity of flagged items** and lets the parent open those flagged items with minimal context. It must **never** present an app's messages as a readable inbox, thread, or transcript. A "show me WhatsApp/Snapchat/Telegram messages" request is a request for the full mirror that invariant 2 forbids — build the flag-only per-app view instead, and say why.
 
-Native **Kotlin**, three components:
+## Architecture
 
-- `child-app/` — capture (NotificationListenerService + AccessibilityService), on-device risk engine, foreground service, local encrypted store (Room + Keystore).
-- `parent-app/` — alert console + control surface (app limits, screen-time, location, install approval), PIN/biometric auth.
-- `backend/` — device pairing, flagged-alert sync, ConsentRecord store. Kotlin (Ktor/Spring Boot) or Node; PostgreSQL. Holds flagged items only.
+Native **Kotlin** apps + a Kotlin/Ktor backend, with a shared pure-Kotlin core. Gradle multi-module:
+
+- `shared/` — **pure Kotlin/JVM, no Android dependency.** Domain model + the on-device risk engine and its rules, plus the provisioning age-ceiling guard. This is the testable product core; the child-app's analyzer calls into it. Builds and unit-tests on any JVM without the Android SDK.
+- `child-app/` — capture (NotificationListenerService + AccessibilityService), foreground service, on-device analyzer wiring over `shared`, local encrypted store (Room + Keystore), always-visible disclosure UI (Jetpack Compose).
+- `parent-app/` — alert console + per-app activity + control surface (app limits, screen-time, location, install approval), PIN/biometric auth (Jetpack Compose).
+- `backend/` — **Kotlin + Ktor + PostgreSQL** (decided — one language across the whole stack). Device pairing, flagged-alert sync, ConsentRecord store. Holds flagged items only.
 
 See the spec's **System architecture**, **Backend and data model**, and **Tech stack** sections for detail.
+
+## Build & toolchain notes
+
+- Build with the Gradle wrapper (`./gradlew`). `shared` targets Java 17 bytecode; use a JDK 17+.
+- The Android modules require the **Android Gradle Plugin** from Google's Maven. They are wired into `settings.gradle.kts` **only when an Android SDK is detected** (`ANDROID_HOME`/`ANDROID_SDK_ROOT`/`local.properties`), so a CI box or sandbox without one still builds `:shared` and `:backend`. On a dev machine with Android Studio they wire in automatically.
+- Run the core tests with `./gradlew :shared:test`.
+
+## Design system
+
+The UI reference lives in the design mockups (see the artifact linked from the session / README). The visual system: teal brand accent, a **separate** semantic severity palette (critical/high/medium), Fraunces (display) + Public Sans (body) + IBM Plex Mono (data). Implement the Compose theme from these tokens. Keep the Child app's disclosure framing — "Active & visible" state, plain "what it looks for", explicit "it does not read your chats".
 
 ## Build roadmap
 
@@ -39,7 +52,7 @@ See the spec's **System architecture**, **Backend and data model**, and **Tech s
 
 ## Status
 
-This repo currently holds the **design specification only**. No application code has been scaffolded yet. The next step is the Phase 1 Kotlin scaffold (child-app capture services + risk-engine stub + parent-app shell).
+Phase 1 in progress. Done: Gradle multi-module scaffold, the `shared` core (domain model + on-device risk engine + provisioning guard) with passing unit tests, and the UI design mockups. Next: `child-app` capture services + analyzer wiring, `parent-app` Compose shell (alert feed, activity-by-app, controls), and the Ktor `backend`.
 
 ## Working notes for Claude Code
 
