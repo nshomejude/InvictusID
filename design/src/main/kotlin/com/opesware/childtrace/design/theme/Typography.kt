@@ -1,4 +1,4 @@
-package com.opesware.childtrace.parent.ui.theme
+package com.opesware.childtrace.design.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable

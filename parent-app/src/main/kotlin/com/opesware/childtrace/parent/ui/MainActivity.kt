@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.opesware.childtrace.parent.ParentApplication
 import com.opesware.childtrace.parent.data.BackendParentRepository
-import com.opesware.childtrace.parent.ui.theme.ChildTraceParentTheme
+import com.opesware.childtrace.design.theme.ChildTraceTheme
 import com.opesware.childtrace.shared.model.AgeBand
 
 /**
@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         val app = application as ParentApplication
 
         setContent {
-            ChildTraceParentTheme {
+            ChildTraceTheme {
                 var authed by remember { mutableStateOf(false) }
                 var childId by remember { mutableStateOf(app.pairedChildId) }
 

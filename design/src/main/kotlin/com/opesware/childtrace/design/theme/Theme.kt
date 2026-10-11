@@ -1,4 +1,4 @@
-package com.opesware.childtrace.parent.ui.theme
+package com.opesware.childtrace.design.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -96,7 +96,7 @@ private val DarkScheme = darkColorScheme(
 )
 
 @Composable
-fun ChildTraceParentTheme(
+fun ChildTraceTheme(
     dark: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {

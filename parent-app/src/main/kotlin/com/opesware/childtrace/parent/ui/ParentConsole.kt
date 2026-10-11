@@ -47,9 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.opesware.childtrace.parent.data.ParentRepository
-import com.opesware.childtrace.parent.ui.theme.Motion
-import com.opesware.childtrace.parent.ui.theme.criticalPulseAlpha
-import com.opesware.childtrace.parent.ui.theme.severityColors
+import com.opesware.childtrace.design.theme.Motion
+import com.opesware.childtrace.design.theme.criticalPulseAlpha
+import com.opesware.childtrace.design.theme.severityColors
 import com.opesware.childtrace.shared.model.Alert
 import com.opesware.childtrace.shared.model.Severity
 

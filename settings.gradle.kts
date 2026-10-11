@@ -32,6 +32,7 @@ val androidSdkAvailable =
         file("local.properties").exists()
 
 if (androidSdkAvailable) {
+    include(":design")
     include(":child-app")
     include(":parent-app")
 } else {

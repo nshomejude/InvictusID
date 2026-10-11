@@ -1,4 +1,4 @@
-package com.opesware.childtrace.parent.ui.theme
+package com.opesware.childtrace.design.theme
 
 import android.provider.Settings
 import androidx.compose.animation.core.RepeatMode
