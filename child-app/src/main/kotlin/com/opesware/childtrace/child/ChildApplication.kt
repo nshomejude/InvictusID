@@ -6,6 +6,8 @@ import com.opesware.childtrace.child.capture.CaptureSink
 import com.opesware.childtrace.child.data.ChildDatabase
 import com.opesware.childtrace.child.data.RoomActivityStore
 import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
+import com.opesware.childtrace.child.sync.BackendClient
+import com.opesware.childtrace.child.sync.SyncManager
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Policy
 
@@ -33,10 +35,16 @@ class ChildApplication : Application() {
             // TODO(security): open with an Android Keystore-derived passphrase (SQLCipher).
             .build()
 
+        val store = RoomActivityStore(db.activityDao())
         captureSink = OnDeviceAnalyzer(
             childId = childId,
             policyProvider = { policy },
-            store = RoomActivityStore(db.activityDao()),
+            store = store,
         )
+
+        // Drain captured activity to the backend on an interval. The base URL
+        // comes from provisioning config in production.
+        val backendBaseUrl = "https://api.childtrace.example"
+        SyncManager(store, BackendClient(backendBaseUrl, childId)).start()
     }
 }
