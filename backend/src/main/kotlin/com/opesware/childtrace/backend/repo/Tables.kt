@@ -59,6 +59,15 @@ object Activities : Table("activities") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object PairingSessions : Table("pairing_sessions") {
+    val code = varchar("code", 32)
+    val childId = varchar("child_id", 64).index()
+    val status = varchar("status", 16)
+    val createdAt = long("created_at")
+    val expiresAt = long("expires_at")
+    override val primaryKey = PrimaryKey(code)
+}
+
 object ParentKeys : Table("parent_keys") {
     val childId = varchar("child_id", 64).index()
     val keyId = varchar("key_id", 32)

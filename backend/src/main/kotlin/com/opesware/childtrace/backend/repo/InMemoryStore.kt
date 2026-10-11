@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
 class InMemoryStore : Store {
     private val devices = ConcurrentHashMap<String, Device>()
     private val consents = ConcurrentHashMap<String, ConsentRecord>()
+    private val pairingSessions = ConcurrentHashMap<String, PairingSession>()
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
     private val audit = ConcurrentHashMap<String, MutableList<AuditEntry>>()
@@ -29,6 +30,9 @@ class InMemoryStore : Store {
 
     override fun saveConsent(record: ConsentRecord) { consents[record.childId] = record }
     override fun consent(childId: String): ConsentRecord? = consents[childId]
+
+    override fun savePairingSession(session: PairingSession) { pairingSessions[session.code] = session }
+    override fun pairingSession(code: String): PairingSession? = pairingSessions[code]
 
     override fun saveParentKey(childId: String, keyId: String, publicKeySpki: String) {
         parentKeys.getOrPut(childId) { mutableMapOf() }[keyId] = publicKeySpki

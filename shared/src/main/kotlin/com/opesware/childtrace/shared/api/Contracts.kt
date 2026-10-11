@@ -38,6 +38,27 @@ data class ParentKeyRequest(val childId: String, val keyId: String, val publicKe
 @Serializable
 data class ParentKeyResponse(val childId: String, val keyId: String, val publicKeySpki: String)
 
+// --- Pairing / onboarding flow ---
+
+/** Agent opens a pairing session for a provisioned child; backend returns a code. */
+@Serializable
+data class CreatePairingRequest(val childId: String)
+
+@Serializable
+data class PairingSessionResponse(
+    val code: String,
+    val childId: String,
+    val status: String,
+    val expiresAtEpochMillis: Long,
+)
+
+/** Parent claims the session with a code and registers its key; must happen before the child pairs. */
+@Serializable
+data class ClaimPairingRequest(val code: String, val keyId: String, val publicKeySpki: String)
+
+@Serializable
+data class ClaimPairingResponse(val childId: String, val band: String)
+
 @Serializable
 data class AlertBatch(val childId: String, val alerts: List<Alert>)
 
@@ -54,6 +75,8 @@ object Endpoints {
     const val ACTIVITY = "/api/v1/activity"
     const val CONSENT = "/api/v1/consent"
     const val PARENT_KEY = "/api/v1/parent-key"
+    const val PAIRING_SESSIONS = "/api/v1/pairing-sessions"
+    const val PAIRING_CLAIM = "/api/v1/pairing-sessions/claim"
     fun childAlerts(childId: String) = "/api/v1/children/$childId/alerts"
     fun childActivity(childId: String) = "/api/v1/children/$childId/activity"
     fun parentKey(childId: String) = "/api/v1/children/$childId/parent-key"

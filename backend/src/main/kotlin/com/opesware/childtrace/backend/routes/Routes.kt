@@ -33,20 +33,27 @@ fun Route.healthRoutes() {
 fun Route.pairingRoutes(store: Store) {
     post(Endpoints.PAIR) {
         val req = call.receive<PairRequest>()
-        require(req.childId.isNotBlank()) { "childId is required" }
         require(req.pairingToken.isNotBlank()) { "pairingToken is required" }
-        // A device cannot pair without a consent record on file for the child.
-        store.consent(req.childId)
-            ?: throw ProvisioningRefusedException("No consent record on file for child ${req.childId}.")
+
+        // The pairing token is the session code. The child can only pair once
+        // the parent has claimed the session (so a parent key exists to seal to)
+        // and before it expires. This enforces the onboarding order.
+        val session = activeSession(store, req.pairingToken)
+        if (session.status == com.opesware.childtrace.backend.repo.PairingStatus.PENDING) {
+            throw ProvisioningRefusedException("The parent must complete setup before the child device can pair.")
+        }
+        store.consent(session.childId)
+            ?: throw ProvisioningRefusedException("No consent record on file for child ${session.childId}.")
 
         val device = Device(
-            id = "dev-${req.childId}",
-            childId = req.childId,
+            id = "dev-${session.childId}",
+            childId = session.childId,
             pairingToken = req.pairingToken,
             appVersion = req.appVersion,
             captureActive = true,
         )
         store.saveDevice(device)
+        store.savePairingSession(session.copy(status = com.opesware.childtrace.backend.repo.PairingStatus.COMPLETED))
         call.respond(HttpStatusCode.Created, device)
     }
 }

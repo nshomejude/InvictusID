@@ -20,6 +20,9 @@ interface Store {
     fun saveConsent(record: ConsentRecord)
     fun consent(childId: String): ConsentRecord?
 
+    fun savePairingSession(session: PairingSession)
+    fun pairingSession(code: String): PairingSession?
+
     /**
      * Register a parent public key for a child. Registering rotates: the new
      * key becomes current and any prior key for the child is marked not-current

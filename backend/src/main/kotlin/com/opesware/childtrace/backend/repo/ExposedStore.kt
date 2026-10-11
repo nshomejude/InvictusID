@@ -42,7 +42,7 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         }
         db = Database.connect(HikariDataSource(cfg))
         transaction(db) {
-            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog, ParentKeys)
+            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog, ParentKeys, PairingSessions)
         }
     }
 
@@ -90,6 +90,30 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
                 signedCertificateRef = it[Consents.signedCertificateRef],
                 provisionedAtEpochMillis = it[Consents.provisionedAt],
                 childAgeAtProvisioning = it[Consents.childAgeAtProvisioning],
+            )
+        }
+    }
+
+    override fun savePairingSession(session: PairingSession) = transaction(db) {
+        PairingSessions.deleteWhere { PairingSessions.code eq session.code }
+        PairingSessions.insert {
+            it[code] = session.code
+            it[childId] = session.childId
+            it[status] = session.status.name
+            it[createdAt] = session.createdAtEpochMillis
+            it[expiresAt] = session.expiresAtEpochMillis
+        }
+        Unit
+    }
+
+    override fun pairingSession(code: String): PairingSession? = transaction(db) {
+        PairingSessions.selectAll().where { PairingSessions.code eq code }.singleOrNull()?.let {
+            PairingSession(
+                code = it[PairingSessions.code],
+                childId = it[PairingSessions.childId],
+                status = PairingStatus.valueOf(it[PairingSessions.status]),
+                createdAtEpochMillis = it[PairingSessions.createdAt],
+                expiresAtEpochMillis = it[PairingSessions.expiresAt],
             )
         }
     }
