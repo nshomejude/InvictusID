@@ -1,10 +1,13 @@
 package com.opesware.childtrace.parent.data
 
+import com.opesware.childtrace.shared.crypto.EnvelopeCrypto
+import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Alert
 import com.opesware.childtrace.shared.model.Policy
 import com.opesware.childtrace.shared.model.Severity
+import kotlinx.serialization.json.Json
 
 /**
  * Backend-backed [ParentRepository]. The UI reads from an in-memory cache;
@@ -20,15 +23,25 @@ class BackendParentRepository(
     private val displayName: String,
     private val band: AgeBand,
     private val client: BackendParentClient,
+    private val keystore: ParentKeystore,
 ) : ParentRepository {
 
     @Volatile private var cachedAlerts: List<Alert> = emptyList()
     @Volatile private var cachedActivity: List<ActivityRecord> = emptyList()
 
+    /** Registers this parent's public key for the child (idempotent). Call at pairing. */
+    suspend fun registerKey() = client.registerParentKey(childId, keystore.publicKeySpki())
+
     suspend fun refresh() {
         cachedAlerts = client.alerts(childId)
-        cachedActivity = client.activity(childId)
+        cachedActivity = client.activity(childId).map { it.copy(content = openContent(it.content)) }
     }
+
+    /** Opens envelope-sealed content with the parent's private key; leaves plaintext as-is. */
+    private fun openContent(stored: String): String = runCatching {
+        val envelope = Json.decodeFromString(SealedEnvelope.serializer(), stored)
+        EnvelopeCrypto.openToString(envelope, keystore.privateKey())
+    }.getOrDefault(stored)
 
     override fun childName() = displayName
     override fun childPolicy(): Policy = Policy.defaultFor(band)

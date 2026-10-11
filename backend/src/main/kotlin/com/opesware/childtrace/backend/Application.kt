@@ -10,6 +10,7 @@ import com.opesware.childtrace.backend.routes.alertRoutes
 import com.opesware.childtrace.backend.routes.consentRoutes
 import com.opesware.childtrace.backend.routes.healthRoutes
 import com.opesware.childtrace.backend.routes.pairingRoutes
+import com.opesware.childtrace.backend.routes.parentKeyRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -52,6 +53,7 @@ fun Application.module() {
     routing {
         healthRoutes()
         pairingRoutes(store)
+        parentKeyRoutes(store)
         alertRoutes(store)
         activityRoutes(store)
         consentRoutes(store)

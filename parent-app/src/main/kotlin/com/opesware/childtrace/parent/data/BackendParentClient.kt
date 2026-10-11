@@ -1,6 +1,7 @@
 package com.opesware.childtrace.parent.data
 
 import com.opesware.childtrace.shared.api.Endpoints
+import com.opesware.childtrace.shared.api.ParentKeyRequest
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
 import io.ktor.client.HttpClient
@@ -8,6 +9,10 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
@@ -19,6 +24,14 @@ class BackendParentClient(
     private val baseUrl: String,
     private val client: HttpClient = defaultClient(),
 ) {
+    /** Registers the parent's public key for a child at pairing. */
+    suspend fun registerParentKey(childId: String, publicKeySpki: String) {
+        client.post(baseUrl + Endpoints.PARENT_KEY) {
+            contentType(ContentType.Application.Json)
+            setBody(ParentKeyRequest(childId, publicKeySpki))
+        }
+    }
+
     suspend fun alerts(childId: String): List<Alert> =
         client.get(baseUrl + Endpoints.childAlerts(childId)).body()
 

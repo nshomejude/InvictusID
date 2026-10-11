@@ -59,6 +59,12 @@ object Activities : Table("activities") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object ParentKeys : Table("parent_keys") {
+    val childId = varchar("child_id", 64)
+    val publicKeySpki = text("public_key_spki")
+    override val primaryKey = PrimaryKey(childId)
+}
+
 object AuditLog : Table("audit_log") {
     val id = long("id").autoIncrement()
     val at = long("at")

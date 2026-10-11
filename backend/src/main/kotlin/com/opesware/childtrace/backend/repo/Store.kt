@@ -20,6 +20,10 @@ interface Store {
     fun saveConsent(record: ConsentRecord)
     fun consent(childId: String): ConsentRecord?
 
+    /** The parent's public key (base64 SPKI) for a child, used to seal synced content. */
+    fun saveParentKey(childId: String, publicKeySpki: String)
+    fun parentKey(childId: String): String?
+
     fun addAlerts(childId: String, items: List<Alert>)
     /** Alerts for a child, severity-ranked (critical first). */
     fun alerts(childId: String): List<Alert>

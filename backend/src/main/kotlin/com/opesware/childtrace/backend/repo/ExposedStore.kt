@@ -40,7 +40,7 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         }
         db = Database.connect(HikariDataSource(cfg))
         transaction(db) {
-            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog)
+            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog, ParentKeys)
         }
     }
 
@@ -90,6 +90,20 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
                 childAgeAtProvisioning = it[Consents.childAgeAtProvisioning],
             )
         }
+    }
+
+    override fun saveParentKey(childId: String, publicKeySpki: String) = transaction(db) {
+        ParentKeys.deleteWhere { ParentKeys.childId eq childId }
+        ParentKeys.insert {
+            it[ParentKeys.childId] = childId
+            it[ParentKeys.publicKeySpki] = publicKeySpki
+        }
+        Unit
+    }
+
+    override fun parentKey(childId: String): String? = transaction(db) {
+        ParentKeys.selectAll().where { ParentKeys.childId eq childId }
+            .singleOrNull()?.get(ParentKeys.publicKeySpki)
     }
 
     override fun addAlerts(childId: String, items: List<Alert>) = transaction(db) {

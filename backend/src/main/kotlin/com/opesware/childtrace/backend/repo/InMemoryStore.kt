@@ -20,12 +20,16 @@ class InMemoryStore : Store {
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
     private val audit = ConcurrentHashMap<String, MutableList<AuditEntry>>()
+    private val parentKeys = ConcurrentHashMap<String, String>()
 
     override fun saveDevice(device: Device) { devices[device.id] = device }
     override fun device(id: String): Device? = devices[id]
 
     override fun saveConsent(record: ConsentRecord) { consents[record.childId] = record }
     override fun consent(childId: String): ConsentRecord? = consents[childId]
+
+    override fun saveParentKey(childId: String, publicKeySpki: String) { parentKeys[childId] = publicKeySpki }
+    override fun parentKey(childId: String): String? = parentKeys[childId]
 
     override fun addAlerts(childId: String, items: List<Alert>) {
         alerts.getOrPut(childId) { mutableListOf() }.addAll(items)

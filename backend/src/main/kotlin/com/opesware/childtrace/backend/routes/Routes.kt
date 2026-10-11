@@ -13,6 +13,8 @@ import com.opesware.childtrace.shared.api.ConsentRequest
 import com.opesware.childtrace.shared.api.Endpoints
 import com.opesware.childtrace.shared.api.HealthResponse
 import com.opesware.childtrace.shared.api.PairRequest
+import com.opesware.childtrace.shared.api.ParentKeyRequest
+import com.opesware.childtrace.shared.api.ParentKeyResponse
 import com.opesware.childtrace.shared.engine.Provisioning
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
@@ -69,6 +71,28 @@ fun Route.alertRoutes(store: Store) {
 
 private fun audit(call: ApplicationCall, action: AuditAction, resource: AuditResource, childId: String, detail: String? = null) =
     AuditEntry(System.currentTimeMillis(), call.actor(), action, resource, childId, detail)
+
+/**
+ * Pairing key exchange. The parent registers their RSA public key for a child;
+ * the child fetches it so it can envelope-seal synced content to the parent.
+ * Only the public key is ever handled here — the private key never leaves the
+ * parent's device.
+ */
+fun Route.parentKeyRoutes(store: Store) {
+    post(Endpoints.PARENT_KEY) {
+        val req = call.receive<ParentKeyRequest>()
+        require(req.childId.isNotBlank()) { "childId is required" }
+        require(req.publicKeySpki.isNotBlank()) { "publicKeySpki is required" }
+        store.saveParentKey(req.childId, req.publicKeySpki)
+        call.respond(HttpStatusCode.Created, ParentKeyResponse(req.childId, req.publicKeySpki))
+    }
+    get("/api/v1/children/{childId}/parent-key") {
+        val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
+        val key = store.parentKey(childId)
+            ?: throw ProvisioningRefusedException("No parent key registered for child $childId.")
+        call.respond(ParentKeyResponse(childId, key))
+    }
+}
 
 /**
  * Comprehensive (visible) activity sync. Content arrives already encrypted at

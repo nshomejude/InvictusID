@@ -26,6 +26,14 @@ data class ConsentRequest(
     val signedCertificateRef: String,
 )
 
+/** The parent registers their RSA public key (base64 SPKI) for a child at pairing. */
+@Serializable
+data class ParentKeyRequest(val childId: String, val publicKeySpki: String)
+
+/** The child fetches the parent's public key so it can seal synced content. */
+@Serializable
+data class ParentKeyResponse(val childId: String, val publicKeySpki: String)
+
 @Serializable
 data class AlertBatch(val childId: String, val alerts: List<Alert>)
 
@@ -41,6 +49,8 @@ object Endpoints {
     const val ALERTS = "/api/v1/alerts"
     const val ACTIVITY = "/api/v1/activity"
     const val CONSENT = "/api/v1/consent"
+    const val PARENT_KEY = "/api/v1/parent-key"
     fun childAlerts(childId: String) = "/api/v1/children/$childId/alerts"
     fun childActivity(childId: String) = "/api/v1/children/$childId/activity"
+    fun parentKey(childId: String) = "/api/v1/children/$childId/parent-key"
 }
