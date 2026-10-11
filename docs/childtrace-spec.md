@@ -5,9 +5,18 @@ _As of Oct 11, 2026 · Jude Nshome, Opesware Technologies Sarl_
 > Living version of this spec (with the architecture and roadmap diagrams rendered):
 > https://claude.ai/code/artifact/bf9b8b34-0d28-4020-86ee-65359892a734
 
+> ## Revision 2 — product direction (supersedes the detail below where they conflict)
+>
+> Two decisions change the model described in the rest of this document. The invariants in [`CLAUDE.md`](../CLAUDE.md) are authoritative.
+>
+> 1. **Comprehensive monitoring, not flag-only.** A vetted parent may view their own minor child's device activity (messages across apps, browsing, installed apps, location, screen content), not only flagged items — **provided the Child app remains always visible and discloses this plainly to the child.** The on-device risk engine still ranks danger to the top so the parent is never left to scroll. Wherever the text below says "only flagged items leave the device" or "never a transcript", read it as superseded by this, with the always-visible rule intact.
+> 2. **Scope is under-18, sold by application.** Profiles are provisioned for the buyer's own children **under 18** (18+ refused), not only 5–15. Sale is gated by a reviewed parent **application** (buyer 40+, documentary evidence, proof of own child) rather than an in-person counter; there is still no self-serve payment.
+>
+> **What does not change:** always-visible / never-covert (the firewall), own-minor-child-only, encrypted + retention-bounded data, no resale. **New hard gate:** because monitoring is now comprehensive and reaches under-18s, Cameroon counsel must sign off on lawful basis, proportionality, retention, and the child's own data-protection rights before launch — and the **16–17 band stays refused in code** until that sign-off and a defined policy band exist.
+
 ## Overview
 
-ChildTrace is an Android child-safety application for parents of children aged 5–15. It gives a parent timely warning when their child encounters real online danger — grooming, sexual content, bullying, self-harm pressure, a stranger escalating contact — without turning the parent into a reader of every ordinary message their child sends.
+ChildTrace is an Android child-safety application for parents of their own children under 18. It gives a vetted parent visible, disclosed monitoring of their child's device and timely warning when the child encounters real online danger — grooming, sexual content, bullying, self-harm pressure, a stranger escalating contact — with an on-device risk engine that ranks that danger to the top of what the parent sees. (This Overview and the sections below describe the original flag-only, 5–15 model; see **Revision 2** above for the current direction, which supersedes them where they conflict.)
 
 The product is two native Kotlin apps backed by an Opesware cloud service:
 
@@ -15,7 +24,7 @@ The product is two native Kotlin apps backed by an Opesware cloud service:
 - **Parent app** — the parent's phone. It shows a severity-ranked feed of flagged alerts plus the control surface (app limits, screen-time schedules, location, install approval).
 - **Backend** — pairs the two devices, carries flagged alerts, and stores the signed-consent record that makes each deployment legally accountable.
 
-Two decisions define everything below. First, the Child app is **always visible on the child's device** — no hidden icon, no stealth. That single line is what separates ChildTrace from stalkerware. Second, ChildTrace is **sold only in person, consent-gated**, with no in-app purchase and no online sale — the buyer proves they are the child's own parent before the product is provisioned.
+Two decisions define everything below. First, the Child app is **always visible on the child's device** — no hidden icon, no stealth. That single line is what separates ChildTrace from stalkerware, and it holds under Revision 2 without exception. Second, ChildTrace is **consent-gated and never self-serve**: provisioning is gated by a reviewed parent application in which the buyer proves they are the child's own parent, with no in-app purchase or online payment. (Revision 2 replaces the original "in-person counter" sale with an application-based one; the proof-of-own-child gate is unchanged.)
 
 ## Ethical and legal foundation
 
@@ -44,7 +53,7 @@ A 5-year-old and a 15-year-old cannot live under one policy. ChildTrace runs the
 
 The principle across all three: **restrict for the little ones, flag for the tweens, converse with the teens.** Raw visibility goes _down_ as the child gets older, because a 15-year-old under read-everything monitoring both loses trust and pushes the product toward the stalkerware line.
 
-**Hard ceiling at 16.** ChildTrace will not provision a profile for anyone 16 or older. The stated target is 5–15, and refusing 16+ by design keeps the product provably clear of the 16–17 grey zone and the 18+ illegal zone. The age entered at provisioning is bound to the signed consent record, so the ceiling cannot be quietly bypassed after the sale.
+**Age ceiling (Revision 2: under-18).** The product direction extends scope to the buyer's own children under 18; anyone 18 or older is refused. The age entered at provisioning is bound to the signed consent record, so it cannot be quietly bypassed after the sale. **In code the guard still refuses 16+** (the original ceiling) until the 16–17 policy band is defined and Cameroon counsel signs off — the 16–17 grey zone carries the highest legal risk and is not opened by changing a constant. The 18+ refusal is absolute.
 
 ## System architecture
 
