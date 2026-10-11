@@ -26,9 +26,11 @@ class BackendParentClient(
         client.get(baseUrl + Endpoints.childActivity(childId)).body()
 
     companion object {
-        fun defaultClient(): HttpClient = HttpClient(OkHttp) {
+        fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-            // TODO(security): configure certificate pinning on the OkHttp engine.
+            engine {
+                config { certificatePinner(TlsPinning.pinnerFor(host)) }
+            }
         }
     }
 }

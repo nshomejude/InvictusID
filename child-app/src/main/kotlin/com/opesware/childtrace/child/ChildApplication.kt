@@ -6,10 +6,12 @@ import com.opesware.childtrace.child.capture.CaptureSink
 import com.opesware.childtrace.child.data.ChildDatabase
 import com.opesware.childtrace.child.data.RoomActivityStore
 import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
+import com.opesware.childtrace.child.security.KeystoreSecurity
 import com.opesware.childtrace.child.sync.BackendClient
 import com.opesware.childtrace.child.sync.SyncManager
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Policy
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 /**
  * Wires the capture feeds to the on-device analyzer and the encrypted store.
@@ -31,8 +33,13 @@ class ChildApplication : Application() {
         val childId = "unpaired"
         val policy = Policy.defaultFor(AgeBand.FLAG_HIGH)
 
+        // Encrypt the local activity DB at rest: SQLCipher opened with a
+        // passphrase sealed by the Android Keystore (invariant 3).
+        System.loadLibrary("sqlcipher")
+        val security = KeystoreSecurity(this)
+        val factory = SupportOpenHelperFactory(security.databasePassphrase())
         val db = Room.databaseBuilder(this, ChildDatabase::class.java, "childtrace.db")
-            // TODO(security): open with an Android Keystore-derived passphrase (SQLCipher).
+            .openHelperFactory(factory)
             .build()
 
         val store = RoomActivityStore(db.activityDao())

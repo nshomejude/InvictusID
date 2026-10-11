@@ -53,6 +53,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.security.crypto)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)

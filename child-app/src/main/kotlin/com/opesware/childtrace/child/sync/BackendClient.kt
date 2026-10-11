@@ -32,9 +32,13 @@ class BackendClient(
     }
 
     companion object {
-        fun defaultClient(): HttpClient = HttpClient(OkHttp) {
+        fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-            // TODO(security): configure certificate pinning on the OkHttp engine.
+            engine {
+                // Pin the backend's leaf/intermediate keys so a mis-issued or
+                // intercepting certificate is rejected (invariant 3, in transit).
+                config { certificatePinner(TlsPinning.pinnerFor(host)) }
+            }
         }
     }
 }
