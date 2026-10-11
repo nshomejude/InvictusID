@@ -26,8 +26,24 @@ class ProvisioningTest {
 
     @ParameterizedTest
     @CsvSource("16", "17", "18", "25")
-    fun `age ceiling refuses 16 and older`(age: Int) {
+    fun `by default 16 and older is refused`(age: Int) {
         assertInstanceOf(Provisioning.Result.Refused::class.java, Provisioning.validateChildAge(age))
+    }
+
+    @ParameterizedTest
+    @CsvSource("16", "17")
+    fun `senior-teen band is allowed only when the gate is enabled`(age: Int) {
+        val gated = Provisioning.Config(allowSeniorTeen = true)
+        val result = Provisioning.validateChildAge(age, gated)
+        val allowed = assertInstanceOf(Provisioning.Result.Allowed::class.java, result)
+        assertEquals(AgeBand.SENIOR_TEEN, allowed.band)
+    }
+
+    @ParameterizedTest
+    @CsvSource("18", "20", "40")
+    fun `adults are refused even with the senior-teen gate on`(age: Int) {
+        val gated = Provisioning.Config(allowSeniorTeen = true)
+        assertInstanceOf(Provisioning.Result.Refused::class.java, Provisioning.validateChildAge(age, gated))
     }
 
     @ParameterizedTest

@@ -125,16 +125,16 @@ fun Route.activityRoutes(store: Store) {
  * Records the signed consent captured in the sales application. Enforces the
  * software half of the gate via the shared [Provisioning] guard.
  *
- * NOTE: the guard currently refuses ages 16+ (the original hard ceiling). The
- * product direction extends scope to under-18, but the 16–17 band stays
- * refused in code until its policy band is defined AND Cameroon counsel signs
- * off (CLAUDE.md invariant 5/7). Raising the ceiling is a deliberate, reviewed
- * change — not a constant to flip quietly here.
+ * The 16–17 (senior-teen) band is gated behind [config]: it stays refused
+ * unless the deployment explicitly enables it (CHILDTRACE_ALLOW_16_17), which
+ * stands in for Cameroon counsel sign-off (CLAUDE.md invariant 5/7). 18+ is
+ * always refused. Enabling the flag is a deliberate, reviewed decision — not a
+ * default.
  */
-fun Route.consentRoutes(store: Store) {
+fun Route.consentRoutes(store: Store, config: Provisioning.Config = Provisioning.Config()) {
     post(Endpoints.CONSENT) {
         val req = call.receive<ConsentRequest>()
-        when (val result = Provisioning.validateChildAge(req.childAge)) {
+        when (val result = Provisioning.validateChildAge(req.childAge, config)) {
             is Provisioning.Result.Refused -> throw ProvisioningRefusedException(result.reason)
             is Provisioning.Result.Allowed -> {
                 val record = ConsentRecord(

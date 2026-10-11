@@ -31,7 +31,7 @@ private fun newCode(): String {
  * the parent claims it (registering its key); only then can the child device
  * pair. Each step checks consent and ordering, and the code expires.
  */
-fun Route.pairingFlowRoutes(store: Store) {
+fun Route.pairingFlowRoutes(store: Store, config: Provisioning.Config = Provisioning.Config()) {
 
     // Agent: open a pairing session. Requires a consent record already on file.
     post(Endpoints.PAIRING_SESSIONS) {
@@ -62,7 +62,7 @@ fun Route.pairingFlowRoutes(store: Store) {
 
         val consent = store.consent(session.childId)
             ?: throw ProvisioningRefusedException("No consent record on file for child ${session.childId}.")
-        val band = when (val r = Provisioning.validateChildAge(consent.childAgeAtProvisioning)) {
+        val band = when (val r = Provisioning.validateChildAge(consent.childAgeAtProvisioning, config)) {
             is Provisioning.Result.Allowed -> r.band.name
             is Provisioning.Result.Refused -> throw ProvisioningRefusedException(r.reason)
         }

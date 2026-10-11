@@ -41,12 +41,11 @@ class RiskEngine(
             compareBy<Flag> { it.severity.rank }.thenBy { it.confidence }
         )
 
-        // Age-band gate 1: for the narrowed (13–15) band, categories that are
-        // everyday-chatter for a teen (bullying, generic stranger contact) are
-        // analyzed but never surfaced. Real danger still gets through.
-        if (policy.band == com.opesware.childtrace.shared.model.AgeBand.FLAG_NARROWED &&
-            !dominant.category.surfacesInNarrowedBand
-        ) {
+        // Age-band gate 1: for the narrowed-surfacing bands (13–15 and, when
+        // enabled, 16–17), categories that are everyday-chatter for a teen
+        // (bullying, generic stranger contact) are analyzed but never surfaced.
+        // Real danger still gets through.
+        if (policy.band.narrowedSurfacing && !dominant.category.surfacesInNarrowedBand) {
             return null
         }
 

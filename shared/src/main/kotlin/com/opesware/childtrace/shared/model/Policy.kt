@@ -50,6 +50,13 @@ data class Policy(
                 locationSharingEnabled = false,
                 requireInstallApproval = false,
             )
+            AgeBand.SENIOR_TEEN -> Policy(
+                band = band,
+                // 16–17: narrowest posture, only genuine danger surfaces.
+                minSurfacedSeverity = Severity.HIGH,
+                locationSharingEnabled = false,
+                requireInstallApproval = false,
+            )
         }
     }
 }

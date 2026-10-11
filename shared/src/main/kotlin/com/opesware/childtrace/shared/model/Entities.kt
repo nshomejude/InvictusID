@@ -13,7 +13,7 @@ data class Parent(
 /**
  * A monitored child profile. [age] is bound to the signed [ConsentRecord] and
  * is validated against the hard ceiling at provisioning — a profile with
- * age >= [AgeBand.AGE_CEILING] must never be created.
+ * age >= [AgeBand.ADULT_AGE] must never be created.
  */
 @Serializable
 data class Child(

@@ -51,13 +51,18 @@ fun Application.module() {
     // Bounded retention: expire alerts/activity past the window (invariant 3).
     RetentionScheduler(store).start()
 
+    // The 16–17 band is refused unless explicitly enabled (counsel sign-off).
+    val provisioningConfig = com.opesware.childtrace.shared.engine.Provisioning.Config(
+        allowSeniorTeen = System.getenv("CHILDTRACE_ALLOW_16_17") == "true",
+    )
+
     routing {
         healthRoutes()
         pairingRoutes(store)
-        pairingFlowRoutes(store)
+        pairingFlowRoutes(store, provisioningConfig)
         parentKeyRoutes(store)
         alertRoutes(store)
         activityRoutes(store)
-        consentRoutes(store)
+        consentRoutes(store, provisioningConfig)
     }
 }
