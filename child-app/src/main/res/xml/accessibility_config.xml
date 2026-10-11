@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gap-filler capture config. Scoped to the monitored messaging apps; the
+  per-app parsers that interpret these events live in the service. The
+  description is shown to the user when enabling the service (open disclosure).
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeViewTextChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="300"
+    android:description="@string/capture_channel_desc"
+    android:packageNames="com.whatsapp,com.instagram.android,org.telegram.messenger,com.snapchat.android,com.zhiliaoapp.musically" />
