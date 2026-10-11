@@ -35,6 +35,7 @@ if (androidSdkAvailable) {
     include(":design")
     include(":child-app")
     include(":parent-app")
+    include(":agent-app")
 } else {
     logger.lifecycle(
         "ChildTrace: no Android SDK detected — building :shared and :backend only. " +
