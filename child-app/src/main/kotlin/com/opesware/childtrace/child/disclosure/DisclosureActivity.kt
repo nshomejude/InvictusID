@@ -1,8 +1,11 @@
 package com.opesware.childtrace.child.disclosure
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.opesware.childtrace.child.pairing.PairingActivity
+import com.opesware.childtrace.child.pairing.pairedChild
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +35,14 @@ import androidx.compose.ui.unit.dp
 class DisclosureActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Not yet paired → send the child through setup first (shown openly).
+        if (pairedChild(this) == null) {
+            startActivity(Intent(this, PairingActivity::class.java))
+            finish()
+            return
+        }
+
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {

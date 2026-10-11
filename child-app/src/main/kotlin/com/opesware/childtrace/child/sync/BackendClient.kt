@@ -2,10 +2,12 @@ package com.opesware.childtrace.child.sync
 
 import com.opesware.childtrace.shared.api.ActivityBatch
 import com.opesware.childtrace.shared.api.Endpoints
+import com.opesware.childtrace.shared.api.PairRequest
 import com.opesware.childtrace.shared.api.ParentKeyResponse
 import com.opesware.childtrace.shared.crypto.EnvelopeCrypto
 import com.opesware.childtrace.shared.crypto.PairingKeys
 import com.opesware.childtrace.shared.model.ActivityRecord
+import com.opesware.childtrace.shared.model.Device
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.serialization.json.Json as JsonFormat
@@ -65,6 +67,19 @@ class BackendClient(
     }
 
     companion object {
+        /**
+         * Pairs this device using the agent-issued code. The backend derives the
+         * child id from the (parent-claimed) session, so the returned [Device]
+         * tells the child which id it has been bound to.
+         */
+        suspend fun pairDevice(baseUrl: String, code: String, appVersion: String): Device {
+            val client = defaultClient()
+            return client.post(baseUrl + Endpoints.PAIR) {
+                contentType(ContentType.Application.Json)
+                setBody(PairRequest(childId = "", pairingToken = code, appVersion = appVersion))
+            }.body()
+        }
+
         fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
             engine {

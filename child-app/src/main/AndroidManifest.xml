@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Shown at setup, before pairing completes. Not a launcher entry. -->
+        <activity
+            android:name=".pairing.PairingActivity"
+            android:exported="false" />
+
         <!-- Primary capture feed: system-wide notification text. -->
         <service
             android:name=".capture.NotificationCaptureService"

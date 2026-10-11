@@ -6,6 +6,8 @@ import com.opesware.childtrace.child.capture.CaptureSink
 import com.opesware.childtrace.child.data.ChildDatabase
 import com.opesware.childtrace.child.data.RoomActivityStore
 import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
+import com.opesware.childtrace.child.pairing.HasBackendBaseUrl
+import com.opesware.childtrace.child.pairing.pairedChild
 import com.opesware.childtrace.child.security.KeystoreSecurity
 import com.opesware.childtrace.child.sync.BackendClient
 import com.opesware.childtrace.child.sync.SyncManager
@@ -22,7 +24,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
  * The provisioned child's age/band comes from secure provisioning state; a
  * default is used here until pairing writes the real policy.
  */
-class ChildApplication : Application() {
+class ChildApplication : Application(), HasBackendBaseUrl {
+
+    override val backendBaseUrl: String = "https://api.childtrace.example"
 
     lateinit var captureSink: CaptureSink
         private set
@@ -33,8 +37,10 @@ class ChildApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // TODO(pairing): load childId + provisioned Policy from encrypted prefs.
-        val childId = "unpaired"
+        // The paired child id is written by PairingActivity; until the device is
+        // paired, capture produces no bound records and sync is not scheduled.
+        val childId = pairedChild(this)
+        // TODO(pairing): load the provisioned Policy (band) alongside the child id.
         val policy = Policy.defaultFor(AgeBand.FLAG_HIGH)
 
         // Encrypt the local activity DB at rest: SQLCipher opened with a
@@ -48,16 +54,18 @@ class ChildApplication : Application() {
 
         val store = RoomActivityStore(db.activityDao())
         captureSink = OnDeviceAnalyzer(
-            childId = childId,
+            childId = childId ?: "unpaired",
             policyProvider = { policy },
             store = store,
         )
 
-        // Drain captured activity to the backend via WorkManager (survives
-        // process death / reboot, network-gated, exponential backoff). The base
-        // URL comes from provisioning config in production.
-        val backendBaseUrl = "https://api.childtrace.example"
-        syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId))
-        SyncWorker.schedule(this)
+        // Only drain to the backend once paired (there is a parent key to seal
+        // to). WorkManager handles cadence, reboot survival, and backoff.
+        if (childId != null) {
+            syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId))
+            SyncWorker.schedule(this)
+        } else {
+            syncManager = SyncManager(store, BackendClient(backendBaseUrl, "unpaired"))
+        }
     }
 }

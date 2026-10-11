@@ -11,7 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.opesware.childtrace.parent.ParentApplication
+import com.opesware.childtrace.parent.data.BackendParentRepository
 import com.opesware.childtrace.parent.ui.theme.ChildTraceParentTheme
+import com.opesware.childtrace.shared.model.AgeBand
 
 /**
  * Entry point. The Parent app is PIN/biometric gated so a found phone does not
@@ -22,15 +24,33 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val repo = (application as ParentApplication).repository
+        val app = application as ParentApplication
 
         setContent {
             ChildTraceParentTheme {
                 var authed by remember { mutableStateOf(false) }
-                if (authed) {
-                    ParentConsole(repo)
-                } else {
-                    AuthGate(onUnlock = { promptBiometric { authed = true } })
+                var childId by remember { mutableStateOf(app.pairedChildId) }
+
+                when {
+                    !authed -> AuthGate(onUnlock = { promptBiometric { authed = true } })
+                    childId == null -> PairingScreen(app.client, app.keystore) { paired ->
+                        app.pairedChildId = paired
+                        childId = paired
+                    }
+                    else -> {
+                        // Backed by the real backend once paired; a ViewModel would
+                        // own refresh() in production. Band is resolved at pairing.
+                        val repo = remember(childId) {
+                            BackendParentRepository(
+                                childId = childId!!,
+                                displayName = childId!!,
+                                band = AgeBand.FLAG_HIGH,
+                                client = app.client,
+                                keystore = app.keystore,
+                            )
+                        }
+                        ParentConsole(repo)
+                    }
                 }
             }
         }

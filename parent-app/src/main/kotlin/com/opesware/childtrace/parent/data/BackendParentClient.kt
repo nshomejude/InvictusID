@@ -1,5 +1,7 @@
 package com.opesware.childtrace.parent.data
 
+import com.opesware.childtrace.shared.api.ClaimPairingRequest
+import com.opesware.childtrace.shared.api.ClaimPairingResponse
 import com.opesware.childtrace.shared.api.Endpoints
 import com.opesware.childtrace.shared.api.ParentKeyRequest
 import com.opesware.childtrace.shared.model.ActivityRecord
@@ -24,6 +26,17 @@ class BackendParentClient(
     private val baseUrl: String,
     private val client: HttpClient = defaultClient(),
 ) {
+    /**
+     * Claims a pairing session with the agent-issued code, registering this
+     * parent's current key in the same step. Returns the child id (implied by
+     * the code) and the resolved policy band.
+     */
+    suspend fun claimPairing(code: String, keyId: String, publicKeySpki: String): ClaimPairingResponse =
+        client.post(baseUrl + Endpoints.PAIRING_CLAIM) {
+            contentType(ContentType.Application.Json)
+            setBody(ClaimPairingRequest(code, keyId, publicKeySpki))
+        }.body()
+
     /** Registers (or rotates to) the parent's public key for a child. */
     suspend fun registerParentKey(childId: String, keyId: String, publicKeySpki: String) {
         client.post(baseUrl + Endpoints.PARENT_KEY) {
