@@ -31,6 +31,10 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import com.opesware.childtrace.shared.model.ActivityRecord
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,13 +42,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.opesware.childtrace.parent.data.ParentRepository
-import com.opesware.childtrace.parent.ui.theme.severityColor
+import com.opesware.childtrace.parent.ui.theme.Motion
+import com.opesware.childtrace.parent.ui.theme.criticalPulseAlpha
+import com.opesware.childtrace.parent.ui.theme.severityColors
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.Severity
 
 @Composable
 fun AuthGate(onUnlock: () -> Unit) {
@@ -76,12 +83,15 @@ fun ParentConsole(repo: ParentRepository) {
             }
         },
     ) { pad ->
-        Box(Modifier.padding(pad)) {
-            when (tab) {
-                0 -> AlertFeedScreen(repo)
-                1 -> ActivityByAppScreen(repo)
-                2 -> ActivityStreamScreen(repo)
-                else -> ControlsScreen(repo)
+        // Tab content crossfades at motionBase (styling-spec §8).
+        Crossfade(targetState = tab, animationSpec = tween(Motion.base), label = "tab") { current ->
+            Box(Modifier.padding(pad)) {
+                when (current) {
+                    0 -> AlertFeedScreen(repo)
+                    1 -> ActivityByAppScreen(repo)
+                    2 -> ActivityStreamScreen(repo)
+                    else -> ControlsScreen(repo)
+                }
             }
         }
     }
@@ -105,16 +115,20 @@ private fun AlertFeedScreen(repo: ParentRepository) {
         Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(alerts) { AlertCard(it) }
+        items(alerts, key = { it.id }) { AlertCard(it, Modifier.animateItem()) }
     }
 }
 
 @Composable
-private fun AlertCard(alert: Alert) {
-    Card(Modifier.fillMaxWidth()) {
+private fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
+    Card(modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SeverityChip(alert.severity.name, severityColor(alert.severity.rank))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SeverityChip(alert.severity)
+                    // The one sanctioned glow: a pulsing dot on a new critical alert.
+                    if (alert.severity == Severity.CRITICAL && alert.status.name == "NEW") CriticalPulseDot()
+                }
                 Text(alert.status.name, fontSize = 11.sp)
             }
             Text(alert.category.label, fontWeight = FontWeight.SemiBold)
@@ -124,13 +138,32 @@ private fun AlertCard(alert: Alert) {
     }
 }
 
+/** Severity label on its own paired container (anti-collision, styling-spec §2). */
 @Composable
-private fun SeverityChip(label: String, color: Color) {
+private fun SeverityChip(severity: Severity) {
+    val (fg, bg) = severityColors(severity.rank)
     Box(
         Modifier
-            .background(color.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+            .background(bg, RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp)
-    ) { Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
+    ) { Text(severity.name, color = fg, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
+}
+
+@Composable
+private fun CriticalPulseDot() {
+    val (fg, _) = severityColors(Severity.CRITICAL.rank)
+    Box(Modifier.size(9.dp).alpha(criticalPulseAlpha()).background(fg, CircleShape))
+}
+
+/** A numeric count on its severity-paired container. */
+@Composable
+private fun CountChip(count: Int, rank: Int) {
+    val (fg, bg) = severityColors(rank)
+    Box(
+        Modifier
+            .background(bg, RoundedCornerShape(999.dp))
+            .padding(horizontal = 9.dp, vertical = 3.dp)
+    ) { Text(count.toString(), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
 }
 
 @Composable
@@ -159,8 +192,8 @@ private fun ActivityByAppScreen(repo: ParentRepository) {
                         Text(app.appLabel, fontWeight = FontWeight.SemiBold)
                         Text(app.lastActivity, fontSize = 11.sp)
                     }
-                    val c = app.topSeverity?.let { severityColor(it.rank) } ?: Color(0xFF0E7A68)
-                    SeverityChip(app.flaggedCount.toString(), c)
+                    // Count on its severity-paired container (or the clear/safe pair when 0).
+                    CountChip(app.flaggedCount, app.topSeverity?.rank ?: Severity.LOW.rank)
                 }
             }
         }
@@ -181,17 +214,17 @@ private fun ActivityStreamScreen(repo: ParentRepository) {
             )
             Spacer(Modifier.height(4.dp))
         }
-        items(items) { ActivityCard(it) }
+        items(items, key = { it.id }) { ActivityCard(it, Modifier.animateItem()) }
     }
 }
 
 @Composable
-private fun ActivityCard(record: ActivityRecord) {
-    Card(Modifier.fillMaxWidth()) {
+private fun ActivityCard(record: ActivityRecord, modifier: Modifier = Modifier) {
+    Card(modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(record.type.name.replace('_', ' '), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                record.severity?.let { SeverityChip(it.name, severityColor(it.rank)) }
+                record.severity?.let { SeverityChip(it) }
             }
             Text(record.content)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
