@@ -4,7 +4,7 @@ Project context for Claude Code and any developer working in this repo. Read thi
 
 ## What ChildTrace is
 
-An Android child-safety product for parents of children **aged 5–15** (hard ceiling at 16). It warns a parent when their child hits real online danger — grooming, sexual content, bullying, self-harm pressure, stranger escalation — by flagging those signals, **not** by mirroring every message.
+An Android child-safety product for parents of their own children **under 18**. It gives a vetted parent visible, disclosed monitoring of their child's device and warns them of real online danger — grooming, sexual content, bullying, self-harm pressure, stranger escalation — with the on-device risk engine ranking that danger to the top. It is sold only through a reviewed parent application, never self-serve, and is never hidden from the child.
 
 Built by **Opesware Technologies Sarl** (Cameroon). Full design in [`docs/childtrace-spec.md`](docs/childtrace-spec.md).
 
@@ -12,16 +12,17 @@ Built by **Opesware Technologies Sarl** (Cameroon). Full design in [`docs/childt
 
 These are product invariants. Do not implement anything that violates them, and flag any request that would:
 
-1. **The Child app is always visible.** It shows in the launcher/app list and states what it monitors. There is **no hidden-icon / stealth mode** and none is to be added. Hiding it turns the product into stalkerware → Play removal, antivirus flags, legal liability.
-2. **Flag, don't mirror.** The parent sees severity-ranked flagged items with minimal context — never a full inbox/transcript. Normal messages are analyzed on-device and discarded.
-3. **On-device first.** Capture and classification run on the child's phone. Only flagged items leave the device. Any cloud NLP is on already-flagged snippets only (pending the decision in the spec's open comment).
-4. **Consent-gated, in-person sale.** No in-app purchase, no online sale, no payment code anywhere in the apps. Provisioning is gated by a human sales process (buyer 40+, signed consent, proof the child is their own child, child present to consent at 18).
-5. **Hard age ceiling at 16.** The app rejects provisioning any profile aged 16+. Age is bound to the ConsentRecord.
-6. **No data resale.** Ever. Data is used only for child-safety alerting.
+1. **The Child app is always visible.** It shows in the launcher/app list and states what it monitors. There is **no hidden-icon / stealth mode** and none is to be added. This is the firewall: visible, disclosed monitoring of a parent's own minor child is a defensible parental-control category; covert monitoring is stalkerware (Play removal, antivirus flags, legal liability). Everything the parent can see, the child is told is visible. This invariant does not relax for any reason.
+2. **Comprehensive monitoring is allowed — but only openly.** The Parent app may give the parent full visibility into their own minor child's device activity (messages across apps, browsing, installed apps, location, screen content), *provided* invariant 1 holds: the Child app discloses plainly, in age-appropriate terms, that this is happening. The on-device risk engine still ranks and surfaces danger first, so comprehensive access supplements the alert feed rather than leaving a parent to scroll. Nothing is ever collected covertly, and monitoring never extends to anyone but the buyer's own minor child.
+3. **On-device classification; disciplined sync.** Capture and risk classification run on the child's phone. Content synced to the parent for viewing is encrypted in transit and at rest, access-logged, retention-bounded, and scoped strictly to the parent's own paired child. The danger-ranking signal is always computed on-device.
+4. **Consent-gated, application-based sale.** No in-app purchase, no self-serve online sale, no payment code anywhere in the apps. Provisioning is gated by a reviewed application: buyer 40+, documentary evidence, and proof the child is the buyer's own child. This gate — controlling who ever holds the tool — is the primary anti-abuse control and must not be weakened.
+5. **Under-18 only; adults refused.** The app provisions profiles for the buyer's own children **under 18** and rejects anyone 18 or older. The 16–17 band carries materially higher legal risk and **requires Cameroon counsel sign-off before launch** (see invariant 7). Age is bound to the ConsentRecord.
+6. **No data resale.** Ever. Data is used only for child-safety monitoring and alerting, never sold, shared, or repurposed.
+7. **Counsel sign-off gates launch.** Because the monitoring is now comprehensive and extends to under-18s, lawful-basis, proportionality, retention, and the child's own data-protection rights (Cameroon Law No. 2010/012 and the data-protection regime; COPPA-style and GDPR-K as design baselines) must be confirmed by local counsel before any unit ships. Do not treat the breadth of monitoring as settled law.
 
-If a change request conflicts with any of the above, stop and raise it rather than implementing it.
+If a change request conflicts with any of the above, stop and raise it rather than implementing it. The one request that is always refused regardless of framing: making the Child app covert (hidden icon, stealth, disguised identity, or blocking uninstall by the device owner).
 
-**Note on per-app visibility (WhatsApp, Snapchat, Telegram, Instagram, TikTok).** The Child app analyzes messages from these apps *on the device*. The Parent app may show a per-app view (an "Activity by app" screen) that surfaces, per app, the **count and severity of flagged items** and lets the parent open those flagged items with minimal context. It must **never** present an app's messages as a readable inbox, thread, or transcript. A "show me WhatsApp/Snapchat/Telegram messages" request is a request for the full mirror that invariant 2 forbids — build the flag-only per-app view instead, and say why.
+**Per-app visibility (WhatsApp, Snapchat, Telegram, Instagram, TikTok).** The Child app captures and analyzes these on-device. The Parent app's "Activity by app" view may show per-app activity and content for the parent's own minor child, with danger flagged and ranked on top. It stays within invariant 1: the child is told, on their device, that these apps are monitored. It is monitoring, not interception of third parties — only the child's own device is read.
 
 ## Architecture
 
@@ -29,8 +30,8 @@ Native **Kotlin** apps + a Kotlin/Ktor backend, with a shared pure-Kotlin core. 
 
 - `shared/` — **pure Kotlin/JVM, no Android dependency.** Domain model + the on-device risk engine and its rules, plus the provisioning age-ceiling guard. This is the testable product core; the child-app's analyzer calls into it. Builds and unit-tests on any JVM without the Android SDK.
 - `child-app/` — capture (NotificationListenerService + AccessibilityService), foreground service, on-device analyzer wiring over `shared`, local encrypted store (Room + Keystore), always-visible disclosure UI (Jetpack Compose).
-- `parent-app/` — alert console + per-app activity + control surface (app limits, screen-time, location, install approval), PIN/biometric auth (Jetpack Compose).
-- `backend/` — **Kotlin + Ktor + PostgreSQL** (decided — one language across the whole stack). Device pairing, flagged-alert sync, ConsentRecord store. Holds flagged items only.
+- `parent-app/` — alert console (danger ranked first) + per-app activity + full device-activity views + control surface (app limits, screen-time, location, install approval), PIN/biometric auth (Jetpack Compose).
+- `backend/` — **Kotlin + Ktor + PostgreSQL** (decided — one language across the whole stack). Device pairing, encrypted activity + alert sync, ConsentRecord store. All synced content encrypted, access-logged, retention-bounded, scoped to the parent's own child.
 
 See the spec's **System architecture**, **Backend and data model**, and **Tech stack** sections for detail.
 
@@ -42,7 +43,7 @@ See the spec's **System architecture**, **Backend and data model**, and **Tech s
 
 ## Design system
 
-The UI reference lives in the design mockups (see the artifact linked from the session / README). The visual system: teal brand accent, a **separate** semantic severity palette (critical/high/medium), Fraunces (display) + Public Sans (body) + IBM Plex Mono (data). Implement the Compose theme from these tokens. Keep the Child app's disclosure framing — "Active & visible" state, plain "what it looks for", explicit "it does not read your chats".
+The UI reference lives in the design mockups (see the artifact linked from the session / README). The visual system: teal brand accent, a **separate** semantic severity palette (critical/high/medium), Fraunces (display) + Public Sans (body) + IBM Plex Mono (data). Implement the Compose theme from these tokens. The Child app's disclosure framing is load-bearing for invariant 1: an "Active & visible" state and a plain, honest, age-appropriate statement that the device is monitored and what the parent can see. The mockups predate the comprehensive-monitoring decision and still show flag-only copy ("it does not read your chats") — that child-facing copy must be rewritten to be truthful about the actual scope before it ships.
 
 ## Build roadmap
 
@@ -56,6 +57,6 @@ Phase 1 in progress. Done: Gradle multi-module scaffold, the `shared` core (doma
 
 ## Working notes for Claude Code
 
-- Keep the spec (`docs/childtrace-spec.md`) as the source of truth; update it when design decisions change.
-- Legal/compliance items (Cameroon Law No. 2010/012, data-protection regime, ConsentRecord retention) need local counsel sign-off — do not treat the spec's citations as settled law.
-- When in doubt about a monitoring feature, apply the "always visible / flag don't mirror" test above.
+- Keep the spec (`docs/childtrace-spec.md`) as the source of truth; it still describes the earlier flag-only model and needs updating to the comprehensive-but-visible monitoring decision recorded here.
+- Legal/compliance items (Cameroon Law No. 2010/012, data-protection regime, ConsentRecord retention, lawful basis for comprehensive under-18 monitoring) need local counsel sign-off before launch — do not treat any of this as settled law.
+- When in doubt about a monitoring feature, apply the test: is it **visible to the child**, on the buyer's **own minor child** only, encrypted and retention-bounded, and would counsel stand behind it? Covertness is the one answer that is always disqualifying.
