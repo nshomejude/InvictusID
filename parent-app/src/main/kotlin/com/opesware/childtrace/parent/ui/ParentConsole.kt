@@ -25,10 +25,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import com.opesware.childtrace.shared.model.ActivityRecord
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,6 +70,8 @@ fun ParentConsole(repo: ParentRepository) {
                 NavigationBarItem(selected = tab == 1, onClick = { tab = 1 },
                     icon = { Icon(Icons.Filled.Menu, null) }, label = { Text("Apps") })
                 NavigationBarItem(selected = tab == 2, onClick = { tab = 2 },
+                    icon = { Icon(Icons.Filled.List, null) }, label = { Text("Activity") })
+                NavigationBarItem(selected = tab == 3, onClick = { tab = 3 },
                     icon = { Icon(Icons.Filled.Person, null) }, label = { Text("Controls") })
             }
         },
@@ -76,6 +80,7 @@ fun ParentConsole(repo: ParentRepository) {
             when (tab) {
                 0 -> AlertFeedScreen(repo)
                 1 -> ActivityByAppScreen(repo)
+                2 -> ActivityStreamScreen(repo)
                 else -> ControlsScreen(repo)
             }
         }
@@ -157,6 +162,41 @@ private fun ActivityByAppScreen(repo: ParentRepository) {
                     val c = app.topSeverity?.let { severityColor(it.rank) } ?: Color(0xFF0E7A68)
                     SeverityChip(app.flaggedCount.toString(), c)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityStreamScreen(repo: ParentRepository) {
+    val items = repo.activity()
+    LazyColumn(
+        Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Text(
+                "Full activity on ${repo.childName()}'s device. Flagged items are marked and sorted first.",
+                fontSize = 12.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+        items(items) { ActivityCard(it) }
+    }
+}
+
+@Composable
+private fun ActivityCard(record: ActivityRecord) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(record.type.name.replace('_', ' '), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                record.severity?.let { SeverityChip(it.name, severityColor(it.rank)) }
+            }
+            Text(record.content)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(record.sourceApp ?: record.counterparty ?: "", fontSize = 11.sp)
+                Text(record.counterparty?.takeIf { record.sourceApp != null } ?: "", fontSize = 11.sp)
             }
         }
     }

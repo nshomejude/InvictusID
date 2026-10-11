@@ -19,6 +19,8 @@ interface ParentRepository {
     fun childPolicy(): Policy
     fun alerts(): List<Alert>
     fun activityByApp(): List<AppActivitySummary>
+    /** The full decrypted activity stream, danger ranked first — comprehensive visible monitoring. */
+    fun activity(): List<ActivityRecord>
 }
 
 /** One row of the "Activity by app" screen: an app and its flag tally. */
@@ -71,6 +73,19 @@ class MockParentRepository : ParentRepository {
         AppActivitySummary("TikTok", "com.zhiliaoapp.musically", 1, Severity.MEDIUM, "1 medium · today"),
         AppActivitySummary("Snapchat", "com.snapchat.android", 0, null, "No flags · monitored"),
         AppActivitySummary("Telegram", "org.telegram.messenger", 0, null, "No flags · monitored"),
+    )
+
+    override fun activity(): List<ActivityRecord> = listOf(
+        ActivityRecord("r1", "c1", ActivityType.MESSAGE, now - 2 * 60_000, "com.instagram.android",
+            "you're so mature… let's talk on snapchat", "unknown", RiskCategory.GROOMING, Severity.CRITICAL),
+        ActivityRecord("r2", "c1", ActivityType.MESSAGE, now - 60 * 60_000, "com.whatsapp",
+            "see you at practice!", "Team chat"),
+        ActivityRecord("r3", "c1", ActivityType.BROWSING, now - 90 * 60_000, "com.android.chrome",
+            "https://www.khanacademy.org/math", null),
+        ActivityRecord("r4", "c1", ActivityType.APP_USAGE, now - 3 * 60 * 60_000, "com.zhiliaoapp.musically",
+            "TikTok · 42 min", null),
+        ActivityRecord("r5", "c1", ActivityType.LOCATION, now - 4 * 60 * 60_000, null,
+            "Near Douala, Akwa", null),
     )
 
     private val now get() = System.currentTimeMillis()

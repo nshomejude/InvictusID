@@ -5,11 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.opesware.childtrace.parent.ParentApplication
 import com.opesware.childtrace.parent.data.BackendParentRepository
 import com.opesware.childtrace.parent.ui.theme.ChildTraceParentTheme
@@ -49,7 +53,13 @@ class MainActivity : ComponentActivity() {
                                 keystore = app.keystore,
                             )
                         }
-                        ParentConsole(repo)
+                        var loaded by remember(childId) { mutableStateOf(0) }
+                        LaunchedEffect(childId) {
+                            runCatching { withContext(Dispatchers.IO) { repo.registerKey(); repo.refresh() } }
+                            loaded++
+                        }
+                        // Re-read the now-populated cache once the refresh completes.
+                        key(loaded) { ParentConsole(repo) }
                     }
                 }
             }

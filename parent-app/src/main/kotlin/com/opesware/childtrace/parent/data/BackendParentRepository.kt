@@ -57,6 +57,9 @@ class BackendParentRepository(
     override fun childPolicy(): Policy = Policy.defaultFor(band)
     override fun alerts(): List<Alert> = cachedAlerts.sortedByDescending { it.severity.rank }
 
+    override fun activity(): List<ActivityRecord> = cachedActivity
+        .sortedWith(compareByDescending<ActivityRecord> { it.isFlagged }.thenByDescending { it.createdAtEpochMillis })
+
     override fun activityByApp(): List<AppActivitySummary> =
         cachedActivity
             .filter { it.sourceApp != null }
