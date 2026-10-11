@@ -82,15 +82,16 @@ fun Route.parentKeyRoutes(store: Store) {
     post(Endpoints.PARENT_KEY) {
         val req = call.receive<ParentKeyRequest>()
         require(req.childId.isNotBlank()) { "childId is required" }
+        require(req.keyId.isNotBlank()) { "keyId is required" }
         require(req.publicKeySpki.isNotBlank()) { "publicKeySpki is required" }
-        store.saveParentKey(req.childId, req.publicKeySpki)
-        call.respond(HttpStatusCode.Created, ParentKeyResponse(req.childId, req.publicKeySpki))
+        store.saveParentKey(req.childId, req.keyId, req.publicKeySpki)
+        call.respond(HttpStatusCode.Created, ParentKeyResponse(req.childId, req.keyId, req.publicKeySpki))
     }
     get("/api/v1/children/{childId}/parent-key") {
         val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
-        val key = store.parentKey(childId)
+        val (keyId, spki) = store.currentParentKey(childId)
             ?: throw ProvisioningRefusedException("No parent key registered for child $childId.")
-        call.respond(ParentKeyResponse(childId, key))
+        call.respond(ParentKeyResponse(childId, keyId, spki))
     }
 }
 

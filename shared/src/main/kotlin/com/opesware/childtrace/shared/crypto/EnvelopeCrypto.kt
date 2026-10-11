@@ -49,6 +49,7 @@ object EnvelopeCrypto {
 
         val b64 = Base64.getEncoder()
         return SealedEnvelope(
+            keyId = PairingKeys.fingerprint(parentPublicKey),
             wrappedKey = b64.encodeToString(wrappedKey),
             iv = b64.encodeToString(iv),
             ciphertext = b64.encodeToString(ciphertext),
@@ -75,9 +76,15 @@ object EnvelopeCrypto {
         String(open(envelope, privateKey), Charsets.UTF_8)
 }
 
-/** The sealed output: a wrapped content key plus the AES-GCM iv and ciphertext (all base64). */
+/**
+ * The sealed output: a wrapped content key plus the AES-GCM iv and ciphertext
+ * (all base64). [keyId] fingerprints the parent public key this was sealed to,
+ * so after a key rotation the parent can pick the matching private key from its
+ * keyring to open it.
+ */
 @Serializable
 data class SealedEnvelope(
+    val keyId: String,
     val wrappedKey: String,
     val iv: String,
     val ciphertext: String,
@@ -98,4 +105,14 @@ object PairingKeys {
     }
 
     fun encode(key: java.security.Key): String = Base64.getEncoder().encodeToString(key.encoded)
+
+    /**
+     * A stable short id for a public key: base64url of the SHA-256 of its SPKI
+     * encoding. Used to tag sealed envelopes and to name keyring entries, so a
+     * rotated-out key's data can still be routed to the right private key.
+     */
+    fun fingerprint(key: PublicKey): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256").digest(key.encoded)
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(digest).take(16)
+    }
 }

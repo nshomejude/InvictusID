@@ -44,6 +44,31 @@ class EnvelopeCryptoTest {
     }
 
     @Test
+    fun `envelope carries the fingerprint of the key it was sealed to`() {
+        val kp = keyPair()
+        val sealed = EnvelopeCrypto.seal("x", kp.public)
+        assertEquals(PairingKeys.fingerprint(kp.public), sealed.keyId)
+    }
+
+    @Test
+    fun `after rotation each envelope routes to its own key by id`() {
+        val oldKey = keyPair()
+        val newKey = keyPair()
+        // Sealed before and after a rotation.
+        val oldEnv = EnvelopeCrypto.seal("old-data", oldKey.public)
+        val newEnv = EnvelopeCrypto.seal("new-data", newKey.public)
+
+        // A keyring maps keyId -> private key; the parent keeps both.
+        val keyring = mapOf(
+            PairingKeys.fingerprint(oldKey.public) to oldKey.private,
+            PairingKeys.fingerprint(newKey.public) to newKey.private,
+        )
+
+        assertEquals("old-data", EnvelopeCrypto.openToString(oldEnv, keyring.getValue(oldEnv.keyId)))
+        assertEquals("new-data", EnvelopeCrypto.openToString(newEnv, keyring.getValue(newEnv.keyId)))
+    }
+
+    @Test
     fun `public key survives encode-decode round trip`() {
         val kp = keyPair()
         val encoded = PairingKeys.encode(kp.public)

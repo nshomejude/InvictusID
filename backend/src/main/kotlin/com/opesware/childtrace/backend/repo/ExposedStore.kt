@@ -15,6 +15,8 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -92,18 +94,23 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         }
     }
 
-    override fun saveParentKey(childId: String, publicKeySpki: String) = transaction(db) {
-        ParentKeys.deleteWhere { ParentKeys.childId eq childId }
+    override fun saveParentKey(childId: String, keyId: String, publicKeySpki: String) = transaction(db) {
+        // Demote any existing current key, then upsert this one as current.
+        ParentKeys.update({ ParentKeys.childId eq childId }) { it[isCurrent] = false }
+        ParentKeys.deleteWhere { (ParentKeys.childId eq childId) and (ParentKeys.keyId eq keyId) }
         ParentKeys.insert {
             it[ParentKeys.childId] = childId
+            it[ParentKeys.keyId] = keyId
             it[ParentKeys.publicKeySpki] = publicKeySpki
+            it[isCurrent] = true
+            it[registeredAt] = System.currentTimeMillis()
         }
         Unit
     }
 
-    override fun parentKey(childId: String): String? = transaction(db) {
-        ParentKeys.selectAll().where { ParentKeys.childId eq childId }
-            .singleOrNull()?.get(ParentKeys.publicKeySpki)
+    override fun currentParentKey(childId: String): Pair<String, String>? = transaction(db) {
+        ParentKeys.selectAll().where { (ParentKeys.childId eq childId) and (ParentKeys.isCurrent eq true) }
+            .singleOrNull()?.let { it[ParentKeys.keyId] to it[ParentKeys.publicKeySpki] }
     }
 
     override fun addAlerts(childId: String, items: List<Alert>) = transaction(db) {

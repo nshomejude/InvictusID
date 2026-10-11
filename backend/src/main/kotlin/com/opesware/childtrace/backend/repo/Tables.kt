@@ -60,9 +60,13 @@ object Activities : Table("activities") {
 }
 
 object ParentKeys : Table("parent_keys") {
-    val childId = varchar("child_id", 64)
+    val childId = varchar("child_id", 64).index()
+    val keyId = varchar("key_id", 32)
     val publicKeySpki = text("public_key_spki")
-    override val primaryKey = PrimaryKey(childId)
+    val isCurrent = bool("is_current")
+    val registeredAt = long("registered_at")
+    // One row per (child, key) so rotations keep the history of key ids.
+    override val primaryKey = PrimaryKey(childId, keyId)
 }
 
 object AuditLog : Table("audit_log") {

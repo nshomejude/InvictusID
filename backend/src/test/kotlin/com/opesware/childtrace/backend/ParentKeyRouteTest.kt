@@ -20,13 +20,30 @@ class ParentKeyRouteTest {
 
         val register = client.post("/api/v1/parent-key") {
             contentType(ContentType.Application.Json)
-            setBody("""{"childId":"c1","publicKeySpki":"BASE64SPKI=="}""")
+            setBody("""{"childId":"c1","keyId":"kid-1","publicKeySpki":"BASE64SPKI=="}""")
         }
         assertEquals(HttpStatusCode.Created, register.status)
 
         val fetch = client.get("/api/v1/children/c1/parent-key")
         assertEquals(HttpStatusCode.OK, fetch.status)
         assertTrue(fetch.bodyAsText().contains("BASE64SPKI=="))
+        assertTrue(fetch.bodyAsText().contains("kid-1"))
+    }
+
+    @Test
+    fun `registering a new key rotates current to the newest`() = testApplication {
+        application { module() }
+        client.post("/api/v1/parent-key") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"childId":"c1","keyId":"kid-1","publicKeySpki":"OLD=="}""")
+        }
+        client.post("/api/v1/parent-key") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"childId":"c1","keyId":"kid-2","publicKeySpki":"NEW=="}""")
+        }
+        val fetch = client.get("/api/v1/children/c1/parent-key")
+        assertTrue(fetch.bodyAsText().contains("kid-2"))
+        assertTrue(fetch.bodyAsText().contains("NEW=="))
     }
 
     @Test

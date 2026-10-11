@@ -20,7 +20,9 @@ class InMemoryStore : Store {
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
     private val audit = ConcurrentHashMap<String, MutableList<AuditEntry>>()
-    private val parentKeys = ConcurrentHashMap<String, String>()
+    // childId -> (keyId -> spki), plus the current keyId per child.
+    private val parentKeys = ConcurrentHashMap<String, MutableMap<String, String>>()
+    private val currentKeyId = ConcurrentHashMap<String, String>()
 
     override fun saveDevice(device: Device) { devices[device.id] = device }
     override fun device(id: String): Device? = devices[id]
@@ -28,8 +30,15 @@ class InMemoryStore : Store {
     override fun saveConsent(record: ConsentRecord) { consents[record.childId] = record }
     override fun consent(childId: String): ConsentRecord? = consents[childId]
 
-    override fun saveParentKey(childId: String, publicKeySpki: String) { parentKeys[childId] = publicKeySpki }
-    override fun parentKey(childId: String): String? = parentKeys[childId]
+    override fun saveParentKey(childId: String, keyId: String, publicKeySpki: String) {
+        parentKeys.getOrPut(childId) { mutableMapOf() }[keyId] = publicKeySpki
+        currentKeyId[childId] = keyId
+    }
+    override fun currentParentKey(childId: String): Pair<String, String>? {
+        val keyId = currentKeyId[childId] ?: return null
+        val spki = parentKeys[childId]?.get(keyId) ?: return null
+        return keyId to spki
+    }
 
     override fun addAlerts(childId: String, items: List<Alert>) {
         alerts.getOrPut(childId) { mutableListOf() }.addAll(items)

@@ -24,11 +24,11 @@ class BackendParentClient(
     private val baseUrl: String,
     private val client: HttpClient = defaultClient(),
 ) {
-    /** Registers the parent's public key for a child at pairing. */
-    suspend fun registerParentKey(childId: String, publicKeySpki: String) {
+    /** Registers (or rotates to) the parent's public key for a child. */
+    suspend fun registerParentKey(childId: String, keyId: String, publicKeySpki: String) {
         client.post(baseUrl + Endpoints.PARENT_KEY) {
             contentType(ContentType.Application.Json)
-            setBody(ParentKeyRequest(childId, publicKeySpki))
+            setBody(ParentKeyRequest(childId, keyId, publicKeySpki))
         }
     }
 

@@ -26,13 +26,17 @@ data class ConsentRequest(
     val signedCertificateRef: String,
 )
 
-/** The parent registers their RSA public key (base64 SPKI) for a child at pairing. */
+/**
+ * The parent registers an RSA public key (base64 SPKI) for a child. Registering
+ * a new key rotates: it becomes current, and older keys are retained only as
+ * historical ids (the parent keeps the matching private keys in its keyring).
+ */
 @Serializable
-data class ParentKeyRequest(val childId: String, val publicKeySpki: String)
+data class ParentKeyRequest(val childId: String, val keyId: String, val publicKeySpki: String)
 
-/** The child fetches the parent's public key so it can seal synced content. */
+/** The child fetches the parent's *current* public key so it can seal synced content. */
 @Serializable
-data class ParentKeyResponse(val childId: String, val publicKeySpki: String)
+data class ParentKeyResponse(val childId: String, val keyId: String, val publicKeySpki: String)
 
 @Serializable
 data class AlertBatch(val childId: String, val alerts: List<Alert>)

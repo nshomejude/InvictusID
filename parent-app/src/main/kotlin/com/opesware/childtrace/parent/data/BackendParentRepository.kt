@@ -29,19 +29,29 @@ class BackendParentRepository(
     @Volatile private var cachedAlerts: List<Alert> = emptyList()
     @Volatile private var cachedActivity: List<ActivityRecord> = emptyList()
 
-    /** Registers this parent's public key for the child (idempotent). Call at pairing. */
-    suspend fun registerKey() = client.registerParentKey(childId, keystore.publicKeySpki())
+    /** Registers this parent's current public key for the child. Call at pairing and after rotate(). */
+    suspend fun registerKey() =
+        client.registerParentKey(childId, keystore.currentKeyId(), keystore.currentPublicKeySpki())
 
     suspend fun refresh() {
         cachedAlerts = client.alerts(childId)
         cachedActivity = client.activity(childId).map { it.copy(content = openContent(it.content)) }
     }
 
-    /** Opens envelope-sealed content with the parent's private key; leaves plaintext as-is. */
-    private fun openContent(stored: String): String = runCatching {
-        val envelope = Json.decodeFromString(SealedEnvelope.serializer(), stored)
-        EnvelopeCrypto.openToString(envelope, keystore.privateKey())
-    }.getOrDefault(stored)
+    /**
+     * Opens envelope-sealed content by routing to the private key named in the
+     * envelope's keyId. Content sealed to a key no longer on this device (lost
+     * in a rotation) can't be opened — shown as a placeholder rather than
+     * failing the whole refresh. Plaintext (e.g. mock data) is left as-is.
+     */
+    private fun openContent(stored: String): String {
+        val envelope = runCatching { Json.decodeFromString(SealedEnvelope.serializer(), stored) }
+            .getOrNull() ?: return stored
+        val privateKey = keystore.privateKeyOrNull(envelope.keyId)
+            ?: return "[encrypted with a previous key — unavailable on this device]"
+        return runCatching { EnvelopeCrypto.openToString(envelope, privateKey) }
+            .getOrDefault("[could not decrypt]")
+    }
 
     override fun childName() = displayName
     override fun childPolicy(): Policy = Policy.defaultFor(band)
