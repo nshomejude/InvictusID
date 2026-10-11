@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite)
+    implementation(libs.androidx.work.runtime)
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)

@@ -21,6 +21,7 @@ biometric = "1.2.0-alpha05"
 tensorflowLite = "2.16.1"
 sqlcipher = "4.6.1"
 sqlite = "2.4.0"
+work = "2.9.1"
 
 [libraries]
 kotlin-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -70,6 +71,7 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipher" }
 androidx-sqlite = { module = "androidx.sqlite:sqlite", version.ref = "sqlite" }
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 tensorflow-lite = { module = "org.tensorflow:tensorflow-lite", version.ref = "tensorflowLite" }
 
 [plugins]

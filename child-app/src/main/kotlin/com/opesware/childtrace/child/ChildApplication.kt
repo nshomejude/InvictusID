@@ -9,6 +9,7 @@ import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
 import com.opesware.childtrace.child.security.KeystoreSecurity
 import com.opesware.childtrace.child.sync.BackendClient
 import com.opesware.childtrace.child.sync.SyncManager
+import com.opesware.childtrace.child.sync.SyncWorker
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Policy
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -24,6 +25,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 class ChildApplication : Application() {
 
     lateinit var captureSink: CaptureSink
+        private set
+
+    lateinit var syncManager: SyncManager
         private set
 
     override fun onCreate() {
@@ -49,9 +53,11 @@ class ChildApplication : Application() {
             store = store,
         )
 
-        // Drain captured activity to the backend on an interval. The base URL
-        // comes from provisioning config in production.
+        // Drain captured activity to the backend via WorkManager (survives
+        // process death / reboot, network-gated, exponential backoff). The base
+        // URL comes from provisioning config in production.
         val backendBaseUrl = "https://api.childtrace.example"
-        SyncManager(store, BackendClient(backendBaseUrl, childId)).start()
+        syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId))
+        SyncWorker.schedule(this)
     }
 }
