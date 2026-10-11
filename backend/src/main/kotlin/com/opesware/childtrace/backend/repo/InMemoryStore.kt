@@ -14,28 +14,28 @@ import java.util.concurrent.ConcurrentHashMap
  * Alerts and activity are scoped per child; nothing is shared across children,
  * and nothing is ever exported for resale.
  */
-class InMemoryStore {
+class InMemoryStore : Store {
     private val devices = ConcurrentHashMap<String, Device>()
     private val consents = ConcurrentHashMap<String, ConsentRecord>()
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
 
-    fun saveDevice(device: Device) { devices[device.id] = device }
-    fun device(id: String): Device? = devices[id]
+    override fun saveDevice(device: Device) { devices[device.id] = device }
+    override fun device(id: String): Device? = devices[id]
 
-    fun saveConsent(record: ConsentRecord) { consents[record.childId] = record }
-    fun consent(childId: String): ConsentRecord? = consents[childId]
+    override fun saveConsent(record: ConsentRecord) { consents[record.childId] = record }
+    override fun consent(childId: String): ConsentRecord? = consents[childId]
 
-    fun addAlerts(childId: String, items: List<Alert>) {
+    override fun addAlerts(childId: String, items: List<Alert>) {
         alerts.getOrPut(childId) { mutableListOf() }.addAll(items)
     }
-    fun alerts(childId: String): List<Alert> =
+    override fun alerts(childId: String): List<Alert> =
         alerts[childId].orEmpty().sortedByDescending { it.severity.rank }
 
-    fun addActivity(childId: String, items: List<ActivityRecord>) {
+    override fun addActivity(childId: String, items: List<ActivityRecord>) {
         activity.getOrPut(childId) { mutableListOf() }.addAll(items)
     }
-    fun activity(childId: String): List<ActivityRecord> =
+    override fun activity(childId: String): List<ActivityRecord> =
         // Flagged items first (danger ranked up), then most recent.
         activity[childId].orEmpty().sortedWith(
             compareByDescending<ActivityRecord> { it.isFlagged }

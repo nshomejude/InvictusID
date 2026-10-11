@@ -2,7 +2,9 @@ package com.opesware.childtrace.backend
 
 import com.opesware.childtrace.backend.plugins.configureSerialization
 import com.opesware.childtrace.backend.plugins.configureStatusPages
+import com.opesware.childtrace.backend.repo.ExposedStore
 import com.opesware.childtrace.backend.repo.InMemoryStore
+import com.opesware.childtrace.backend.repo.Store
 import com.opesware.childtrace.backend.routes.activityRoutes
 import com.opesware.childtrace.backend.routes.alertRoutes
 import com.opesware.childtrace.backend.routes.consentRoutes
@@ -26,11 +28,18 @@ fun main() {
  * activity, and hold the signed ConsentRecord that makes each deployment
  * accountable. It holds as little as the model allows and never resells data.
  *
- * This scaffold uses an in-memory store; swap [InMemoryStore] for a
- * PostgreSQL-backed repository (Exposed) without touching the routes.
+ * The store is chosen from the environment: set DATABASE_URL (plus DATABASE_USER
+ * / DATABASE_PASSWORD) to use PostgreSQL via [ExposedStore]; otherwise it falls
+ * back to the in-memory store for local development and tests.
  */
 fun Application.module() {
-    val store = InMemoryStore()
+    val store: Store = System.getenv("DATABASE_URL")?.let { url ->
+        ExposedStore(
+            jdbcUrl = url,
+            user = System.getenv("DATABASE_USER") ?: "childtrace",
+            password = System.getenv("DATABASE_PASSWORD") ?: "",
+        )
+    } ?: InMemoryStore()
 
     install(DefaultHeaders)
     install(CallLogging)

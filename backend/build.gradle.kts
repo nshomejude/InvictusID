@@ -17,6 +17,12 @@ dependencies {
     implementation(libs.ktor.server.default.headers)
     implementation(libs.logback.classic)
 
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.javatime)
+    implementation(libs.postgres)
+    implementation(libs.hikari)
+
     testImplementation(libs.ktor.server.tests)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

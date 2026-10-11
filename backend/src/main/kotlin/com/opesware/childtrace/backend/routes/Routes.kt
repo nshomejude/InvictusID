@@ -1,7 +1,7 @@
 package com.opesware.childtrace.backend.routes
 
 import com.opesware.childtrace.backend.plugins.ProvisioningRefusedException
-import com.opesware.childtrace.backend.repo.InMemoryStore
+import com.opesware.childtrace.backend.repo.Store
 import com.opesware.childtrace.shared.engine.Provisioning
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
@@ -26,7 +26,7 @@ fun Route.healthRoutes() {
 data class PairRequest(val childId: String, val pairingToken: String, val appVersion: String)
 
 /** Binds a child device to a parent account via a one-time pairing token. */
-fun Route.pairingRoutes(store: InMemoryStore) {
+fun Route.pairingRoutes(store: Store) {
     post("/api/v1/devices/pair") {
         val req = call.receive<PairRequest>()
         require(req.childId.isNotBlank()) { "childId is required" }
@@ -51,7 +51,7 @@ fun Route.pairingRoutes(store: InMemoryStore) {
 data class AlertBatch(val childId: String, val alerts: List<Alert>)
 
 /** Child device pushes flagged alerts; parent app reads the ranked feed. */
-fun Route.alertRoutes(store: InMemoryStore) {
+fun Route.alertRoutes(store: Store) {
     post("/api/v1/alerts") {
         val batch = call.receive<AlertBatch>()
         store.addAlerts(batch.childId, batch.alerts)
@@ -71,7 +71,7 @@ data class ActivityBatch(val childId: String, val activity: List<ActivityRecord>
  * the app layer; the server stores it scoped to the one child and ranks flagged
  * items to the top for the parent.
  */
-fun Route.activityRoutes(store: InMemoryStore) {
+fun Route.activityRoutes(store: Store) {
     post("/api/v1/activity") {
         val batch = call.receive<ActivityBatch>()
         store.addActivity(batch.childId, batch.activity)
@@ -103,7 +103,7 @@ data class ConsentRequest(
  * off (CLAUDE.md invariant 5/7). Raising the ceiling is a deliberate, reviewed
  * change — not a constant to flip quietly here.
  */
-fun Route.consentRoutes(store: InMemoryStore) {
+fun Route.consentRoutes(store: Store) {
     post("/api/v1/consent") {
         val req = call.receive<ConsentRequest>()
         when (val result = Provisioning.validateChildAge(req.childAge)) {
