@@ -1,0 +1,33 @@
+# Android / Gradle
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Kotlin / JVM
+*.class
+out/
+
+# Node (backend option)
+node_modules/
+dist/
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / keys — never commit
+*.pem
+*.p12
+google-services.json
+service-account*.json
