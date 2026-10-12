@@ -50,6 +50,11 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # Don't install the deprecated 'tools' package (it no longer exists and
+          # fails the step); AGP downloads the platform + build-tools it needs
+          # during the build, with licenses already accepted by the action.
+          packages: ''
       - uses: gradle/actions/setup-gradle@v4
       - name: Assemble debug APKs
         run: ./gradlew :child-app:assembleDebug :parent-app:assembleDebug :agent-app:assembleDebug --no-daemon --stacktrace
