@@ -51,7 +51,7 @@
 
         <!-- Gap-filler feed: on-screen text (per-app parsers). -->
         <service
-            android:name=".capture.ScreenCaptureAccessibilityService"
+            android:name=".capture.ScreenTextAccessibilityService"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

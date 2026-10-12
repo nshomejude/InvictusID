@@ -16,7 +16,7 @@ import com.opesware.childtrace.shared.model.CapturedMessage
  * collects visible text nodes from the monitored packages; the per-app parsers
  * that turn raw nodes into clean (sender, message) pairs are a follow-up.
  */
-class ScreenCaptureAccessibilityService : AccessibilityService() {
+class ScreenTextAccessibilityService : AccessibilityService() {
 
     private val sink: CaptureSink get() = (application as ChildApplication).captureSink
 
