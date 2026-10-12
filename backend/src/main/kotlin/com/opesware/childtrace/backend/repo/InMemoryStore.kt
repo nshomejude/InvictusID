@@ -1,7 +1,11 @@
 package com.opesware.childtrace.backend.repo
 
+import com.opesware.childtrace.shared.api.MediaRef
+import com.opesware.childtrace.shared.api.SealedMediaResponse
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.CapturedMedia
+import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
 import java.util.concurrent.ConcurrentHashMap
@@ -21,6 +25,8 @@ class InMemoryStore : Store {
     private val alerts = ConcurrentHashMap<String, MutableList<Alert>>()
     private val activity = ConcurrentHashMap<String, MutableList<ActivityRecord>>()
     private val audit = ConcurrentHashMap<String, MutableList<AuditEntry>>()
+    // childId -> mediaId -> (metadata, sealed envelope)
+    private val media = ConcurrentHashMap<String, MutableMap<String, SealedMediaResponse>>()
     // childId -> (keyId -> spki), plus the current keyId per child.
     private val parentKeys = ConcurrentHashMap<String, MutableMap<String, String>>()
     private val currentKeyId = ConcurrentHashMap<String, String>()
@@ -60,6 +66,19 @@ class InMemoryStore : Store {
                 .thenByDescending { it.createdAtEpochMillis }
         )
 
+    override fun addMedia(media: CapturedMedia, envelope: SealedEnvelope) {
+        this.media.getOrPut(media.childId) { mutableMapOf() }[media.id] =
+            SealedMediaResponse(media, envelope)
+    }
+
+    override fun mediaRefs(childId: String): List<MediaRef> =
+        media[childId].orEmpty().values
+            .sortedByDescending { it.media.capturedAtEpochMillis }
+            .map { MediaRef(it.media, it.envelope.keyId) }
+
+    override fun media(childId: String, mediaId: String): SealedMediaResponse? =
+        media[childId]?.get(mediaId)
+
     override fun recordAccess(entry: AuditEntry) {
         audit.getOrPut(entry.childId) { mutableListOf() }.add(entry)
     }
@@ -78,6 +97,11 @@ class InMemoryStore : Store {
             val before = list.size
             list.removeAll { it.createdAtEpochMillis < cutoffEpochMillis }
             removed += before - list.size
+        }
+        media.values.forEach { byId ->
+            val before = byId.size
+            byId.entries.removeAll { it.value.media.capturedAtEpochMillis < cutoffEpochMillis }
+            removed += before - byId.size
         }
         return removed
     }

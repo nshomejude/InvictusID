@@ -3,7 +3,10 @@ package com.opesware.childtrace.parent.data
 import com.opesware.childtrace.shared.api.ClaimPairingRequest
 import com.opesware.childtrace.shared.api.ClaimPairingResponse
 import com.opesware.childtrace.shared.api.Endpoints
+import com.opesware.childtrace.shared.api.MediaListResponse
+import com.opesware.childtrace.shared.api.MediaRef
 import com.opesware.childtrace.shared.api.ParentKeyRequest
+import com.opesware.childtrace.shared.api.SealedMediaResponse
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
 import io.ktor.client.HttpClient
@@ -50,6 +53,14 @@ class BackendParentClient(
 
     suspend fun activity(childId: String): List<ActivityRecord> =
         client.get(baseUrl + Endpoints.childActivity(childId)).body()
+
+    /** Lists a child's captured media (metadata only — no ciphertext). */
+    suspend fun mediaRefs(childId: String): List<MediaRef> =
+        client.get(baseUrl + Endpoints.childMedia(childId)).body<MediaListResponse>().items
+
+    /** Fetches one sealed media item; the parent decrypts it locally. */
+    suspend fun media(childId: String, mediaId: String): SealedMediaResponse =
+        client.get(baseUrl + Endpoints.childMediaItem(childId, mediaId)).body()
 
     companion object {
         fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {

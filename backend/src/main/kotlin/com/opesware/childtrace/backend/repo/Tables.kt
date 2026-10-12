@@ -78,6 +78,22 @@ object ParentKeys : Table("parent_keys") {
     override val primaryKey = PrimaryKey(childId, keyId)
 }
 
+object MediaItems : Table("media_items") {
+    val id = varchar("id", 64)
+    val childId = varchar("child_id", 64).index()
+    val kind = varchar("kind", 16)
+    val trigger = varchar("trigger", 32)
+    val alertId = varchar("alert_id", 64).nullable()
+    val mimeType = varchar("mime_type", 64)
+    val capturedAt = long("captured_at")
+    // Envelope-sealed to the parent key; opaque to the server.
+    val keyId = varchar("key_id", 32)
+    val wrappedKey = text("wrapped_key")
+    val iv = varchar("iv", 64)
+    val ciphertext = text("ciphertext")
+    override val primaryKey = PrimaryKey(id)
+}
+
 object AuditLog : Table("audit_log") {
     val id = long("id").autoIncrement()
     val at = long("at")

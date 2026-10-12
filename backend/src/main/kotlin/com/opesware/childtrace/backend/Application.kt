@@ -9,6 +9,7 @@ import com.opesware.childtrace.backend.routes.activityRoutes
 import com.opesware.childtrace.backend.routes.alertRoutes
 import com.opesware.childtrace.backend.routes.consentRoutes
 import com.opesware.childtrace.backend.routes.healthRoutes
+import com.opesware.childtrace.backend.routes.mediaRoutes
 import com.opesware.childtrace.backend.routes.pairingFlowRoutes
 import com.opesware.childtrace.backend.routes.pairingRoutes
 import com.opesware.childtrace.backend.routes.parentKeyRoutes
@@ -56,6 +57,12 @@ fun Application.module() {
         allowSeniorTeen = System.getenv("CHILDTRACE_ALLOW_16_17") == "true",
     )
 
+    // Explicit (visible) screen capture is refused unless enabled (counsel sign-off).
+    // Flagged-media capture does not depend on this flag.
+    val mediaConfig = com.opesware.childtrace.shared.engine.MediaPolicy.Config(
+        allowScreenCapture = System.getenv("CHILDTRACE_ALLOW_SCREEN_CAPTURE") == "true",
+    )
+
     routing {
         healthRoutes()
         pairingRoutes(store)
@@ -63,6 +70,7 @@ fun Application.module() {
         parentKeyRoutes(store)
         alertRoutes(store)
         activityRoutes(store)
+        mediaRoutes(store, mediaConfig)
         consentRoutes(store, provisioningConfig)
     }
 }

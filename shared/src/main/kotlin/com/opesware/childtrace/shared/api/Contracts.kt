@@ -2,6 +2,8 @@ package com.opesware.childtrace.shared.api
 
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.CapturedMedia
+import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import kotlinx.serialization.Serializable
 
 /**
@@ -68,6 +70,36 @@ data class ActivityBatch(val childId: String, val activity: List<ActivityRecord>
 @Serializable
 data class AcceptedResponse(val accepted: Int)
 
+// --- Captured media (flagged evidence + explicit screen capture) ---
+
+/**
+ * A piece of [CapturedMedia] uploaded to the backend with its bytes already
+ * envelope-sealed to the parent ([envelope]). The server stores the sealed
+ * blob opaquely — it cannot read it — and serves it back only to the parent
+ * app, which decrypts locally. The backend re-checks the capture justification
+ * against [com.opesware.childtrace.shared.engine.MediaPolicy] before accepting.
+ */
+@Serializable
+data class MediaUploadRequest(
+    val media: CapturedMedia,
+    val envelope: SealedEnvelope,
+)
+
+/**
+ * Metadata for one stored media item, returned when the parent lists a child's
+ * media. Deliberately carries no ciphertext: the parent fetches the sealed blob
+ * by id only when they open it, so listing a feed does not pull every blob.
+ */
+@Serializable
+data class MediaRef(val media: CapturedMedia, val keyId: String)
+
+/** The full sealed item the parent fetches to view one piece of media. */
+@Serializable
+data class SealedMediaResponse(val media: CapturedMedia, val envelope: SealedEnvelope)
+
+@Serializable
+data class MediaListResponse(val items: List<MediaRef>)
+
 object Endpoints {
     const val HEALTH = "/api/v1/health"
     const val PAIR = "/api/v1/devices/pair"
@@ -77,7 +109,10 @@ object Endpoints {
     const val PARENT_KEY = "/api/v1/parent-key"
     const val PAIRING_SESSIONS = "/api/v1/pairing-sessions"
     const val PAIRING_CLAIM = "/api/v1/pairing-sessions/claim"
+    const val MEDIA = "/api/v1/media"
     fun childAlerts(childId: String) = "/api/v1/children/$childId/alerts"
     fun childActivity(childId: String) = "/api/v1/children/$childId/activity"
     fun parentKey(childId: String) = "/api/v1/children/$childId/parent-key"
+    fun childMedia(childId: String) = "/api/v1/children/$childId/media"
+    fun childMediaItem(childId: String, mediaId: String) = "/api/v1/children/$childId/media/$mediaId"
 }

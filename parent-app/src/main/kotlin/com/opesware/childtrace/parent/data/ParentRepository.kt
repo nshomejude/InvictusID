@@ -21,7 +21,34 @@ interface ParentRepository {
     fun activityByApp(): List<AppActivitySummary>
     /** The full decrypted activity stream, danger ranked first — comprehensive visible monitoring. */
     fun activity(): List<ActivityRecord>
+
+    /**
+     * Captured media (screenshots/images tied to an alert, or explicit screen
+     * captures), newest first. Metadata only — the bytes are fetched and
+     * decrypted on demand by [openMedia]. Defaults to empty so the mock and any
+     * non-media repository need not implement it.
+     */
+    suspend fun mediaList(): List<MediaItemUi> = emptyList()
+
+    /**
+     * Fetches one media item and decrypts it **locally** with the parent's
+     * private key. Returns the raw bytes, or null if it can't be decrypted on
+     * this device (e.g. sealed to a rotated-out key). There is no server-side
+     * decryption and no web-admin view — the plaintext exists only here.
+     */
+    suspend fun openMedia(mediaId: String): ByteArray? = null
 }
+
+/** One row of the parent's media gallery. */
+data class MediaItemUi(
+    val id: String,
+    val kindLabel: String,
+    val reason: String,
+    val mimeType: String,
+    val capturedAtEpochMillis: Long,
+    /** False when this item was sealed to a key no longer on this device. */
+    val openableOnThisDevice: Boolean,
+)
 
 /** One row of the "Activity by app" screen: an app and its flag tally. */
 data class AppActivitySummary(

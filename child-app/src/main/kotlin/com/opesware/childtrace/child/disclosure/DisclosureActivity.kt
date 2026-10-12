@@ -75,6 +75,8 @@ private fun DisclosureScreen() {
             "• Messages and activity in your apps\n" +
                 "• Websites you visit and apps you use\n" +
                 "• Where your phone is\n" +
+                "• A picture of your screen — when something looks unsafe, or if your grown-up asks for one. " +
+                "When that happens your phone shows its own \"screen is being recorded\" sign.\n" +
                 "Anything that looks unsafe is shown to them first.",
             style = MaterialTheme.typography.bodyMedium,
         )

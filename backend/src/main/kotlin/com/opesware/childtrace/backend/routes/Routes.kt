@@ -15,7 +15,11 @@ import com.opesware.childtrace.shared.api.HealthResponse
 import com.opesware.childtrace.shared.api.PairRequest
 import com.opesware.childtrace.shared.api.ParentKeyRequest
 import com.opesware.childtrace.shared.api.ParentKeyResponse
+import com.opesware.childtrace.shared.api.MediaListResponse
+import com.opesware.childtrace.shared.api.MediaUploadRequest
+import com.opesware.childtrace.shared.engine.MediaPolicy
 import com.opesware.childtrace.shared.engine.Provisioning
+import com.opesware.childtrace.shared.model.MediaTrigger
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
 import io.ktor.http.HttpStatusCode
@@ -118,6 +122,55 @@ fun Route.activityRoutes(store: Store) {
         val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
         store.recordAccess(audit(call, AuditAction.READ, AuditResource.ACTIVITY, childId))
         call.respond(store.activity(childId))
+    }
+}
+
+/**
+ * Captured media: flagged evidence and explicit (visible) screen captures.
+ *
+ * Upload is guarded a second time here by the shared [MediaPolicy], so the
+ * server refuses anything the on-device guard would have refused — media with
+ * no linked alert, a below-floor alert, or a screen capture when the deployment
+ * flag is off. This is defence in depth against a tampered or buggy client: the
+ * backend will not become a dumping ground for bulk or unsolicited media.
+ *
+ * The bytes are envelope-sealed to the parent on-device, so the server stores
+ * them opaquely and serves them only to the parent app, which decrypts locally.
+ * There is deliberately no server-side decryption and no web-admin view of the
+ * plaintext (invariant 3). Every read and write is audit-logged.
+ */
+fun Route.mediaRoutes(store: Store, config: MediaPolicy.Config = MediaPolicy.Config()) {
+    post(Endpoints.MEDIA) {
+        val req = call.receive<MediaUploadRequest>()
+        val media = req.media
+
+        val linkedSeverity = if (media.trigger == MediaTrigger.FLAGGED_ALERT) {
+            media.alertId?.let { id -> store.alerts(media.childId).firstOrNull { it.id == id }?.severity }
+        } else null
+
+        when (val decision = MediaPolicy.evaluate(media, linkedSeverity, config)) {
+            is MediaPolicy.Decision.Refused -> throw ProvisioningRefusedException(decision.reason)
+            MediaPolicy.Decision.Allowed -> {
+                store.addMedia(media, req.envelope)
+                store.recordAccess(
+                    audit(call, AuditAction.WRITE, AuditResource.MEDIA, media.childId, "${media.kind.name}/${media.trigger.name}")
+                )
+                call.respond(HttpStatusCode.Accepted, AcceptedResponse(1))
+            }
+        }
+    }
+    get("/api/v1/children/{childId}/media") {
+        val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
+        store.recordAccess(audit(call, AuditAction.READ, AuditResource.MEDIA, childId, "list"))
+        call.respond(MediaListResponse(store.mediaRefs(childId)))
+    }
+    get("/api/v1/children/{childId}/media/{mediaId}") {
+        val childId = call.parameters["childId"] ?: throw IllegalArgumentException("childId required")
+        val mediaId = call.parameters["mediaId"] ?: throw IllegalArgumentException("mediaId required")
+        val item = store.media(childId, mediaId)
+            ?: throw ProvisioningRefusedException("No media $mediaId for child $childId.")
+        store.recordAccess(audit(call, AuditAction.READ, AuditResource.MEDIA, childId, mediaId))
+        call.respond(item)
     }
 }
 

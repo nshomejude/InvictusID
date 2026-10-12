@@ -79,6 +79,8 @@ fun ParentConsole(repo: ParentRepository) {
                 NavigationBarItem(selected = tab == 2, onClick = { tab = 2 },
                     icon = { Icon(Icons.Filled.List, null) }, label = { Text("Activity") })
                 NavigationBarItem(selected = tab == 3, onClick = { tab = 3 },
+                    icon = { Icon(Icons.Filled.DateRange, null) }, label = { Text("Media") })
+                NavigationBarItem(selected = tab == 4, onClick = { tab = 4 },
                     icon = { Icon(Icons.Filled.Person, null) }, label = { Text("Controls") })
             }
         },
@@ -90,6 +92,7 @@ fun ParentConsole(repo: ParentRepository) {
                     0 -> AlertFeedScreen(repo)
                     1 -> ActivityByAppScreen(repo)
                     2 -> ActivityStreamScreen(repo)
+                    3 -> MediaGalleryScreen(repo)
                     else -> ControlsScreen(repo)
                 }
             }

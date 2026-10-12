@@ -6,12 +6,14 @@ import com.opesware.childtrace.child.capture.CaptureSink
 import com.opesware.childtrace.child.data.ChildDatabase
 import com.opesware.childtrace.child.data.RoomActivityStore
 import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
+import com.opesware.childtrace.child.media.MediaCapturer
 import com.opesware.childtrace.child.pairing.HasBackendBaseUrl
 import com.opesware.childtrace.child.pairing.pairedChild
 import com.opesware.childtrace.child.security.KeystoreSecurity
 import com.opesware.childtrace.child.sync.BackendClient
 import com.opesware.childtrace.child.sync.SyncManager
 import com.opesware.childtrace.child.sync.SyncWorker
+import com.opesware.childtrace.shared.engine.MediaPolicy
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Policy
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -33,6 +35,15 @@ class ChildApplication : Application(), HasBackendBaseUrl {
 
     lateinit var syncManager: SyncManager
         private set
+
+    private var mediaCapturer: MediaCapturer? = null
+
+    /**
+     * The media gate for screen capture, or null until the device is paired.
+     * Explicit screen capture stays disabled unless the deployment enables it
+     * (counsel sign-off); flagged-media capture is always policy-gated.
+     */
+    fun mediaCapturer(): MediaCapturer? = mediaCapturer
 
     override fun onCreate() {
         super.onCreate()
@@ -62,7 +73,16 @@ class ChildApplication : Application(), HasBackendBaseUrl {
         // Only drain to the backend once paired (there is a parent key to seal
         // to). WorkManager handles cadence, reboot survival, and backoff.
         if (childId != null) {
-            syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId))
+            val client = BackendClient(backendBaseUrl, childId)
+            syncManager = SyncManager(store, client)
+            // Explicit screen capture is off unless the build enables it (counsel
+            // sign-off, BuildConfig.ALLOW_SCREEN_CAPTURE). Flagged media is gated
+            // by severity regardless.
+            mediaCapturer = MediaCapturer(
+                childId = childId,
+                client = client,
+                config = MediaPolicy.Config(allowScreenCapture = BuildConfig.ALLOW_SCREEN_CAPTURE),
+            )
             SyncWorker.schedule(this)
         } else {
             syncManager = SyncManager(store, BackendClient(backendBaseUrl, "unpaired"))
