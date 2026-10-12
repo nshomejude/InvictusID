@@ -6,12 +6,17 @@ import com.opesware.childtrace.child.capture.CaptureSink
 import com.opesware.childtrace.child.data.ChildDatabase
 import com.opesware.childtrace.child.data.RoomActivityStore
 import com.opesware.childtrace.child.engine.OnDeviceAnalyzer
+import com.opesware.childtrace.child.engine.OnDeviceClassifier
 import com.opesware.childtrace.child.pairing.HasBackendBaseUrl
 import com.opesware.childtrace.child.pairing.pairedChild
 import com.opesware.childtrace.child.security.KeystoreSecurity
 import com.opesware.childtrace.child.sync.BackendClient
 import com.opesware.childtrace.child.sync.SyncManager
 import com.opesware.childtrace.child.sync.SyncWorker
+import com.opesware.childtrace.child.tamper.TamperMonitor
+import com.opesware.childtrace.shared.engine.ClassifierRule
+import com.opesware.childtrace.shared.engine.RiskEngine
+import com.opesware.childtrace.shared.engine.rules.DefaultRules
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Policy
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -53,16 +58,21 @@ class ChildApplication : Application(), HasBackendBaseUrl {
             .build()
 
         val store = RoomActivityStore(db.activityDao())
+        // Engine = explainable rules + the on-device ML seam (no-op until a model
+        // is bundled, so it never adds a false positive today).
+        val engine = RiskEngine(DefaultRules.all() + ClassifierRule(OnDeviceClassifier()))
         captureSink = OnDeviceAnalyzer(
             childId = childId ?: "unpaired",
             policyProvider = { policy },
             store = store,
+            engine = engine,
         )
 
         // Only drain to the backend once paired (there is a parent key to seal
         // to). WorkManager handles cadence, reboot survival, and backoff.
         if (childId != null) {
-            syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId))
+            val tamperMonitor = TamperMonitor(this, childId)
+            syncManager = SyncManager(store, BackendClient(backendBaseUrl, childId), tamperMonitor)
             SyncWorker.schedule(this)
         } else {
             syncManager = SyncManager(store, BackendClient(backendBaseUrl, "unpaired"))

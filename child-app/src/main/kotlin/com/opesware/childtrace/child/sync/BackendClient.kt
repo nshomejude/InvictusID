@@ -2,12 +2,15 @@ package com.opesware.childtrace.child.sync
 
 import com.opesware.childtrace.shared.api.ActivityBatch
 import com.opesware.childtrace.shared.api.Endpoints
+import com.opesware.childtrace.shared.api.LocationRequest
 import com.opesware.childtrace.shared.api.PairRequest
 import com.opesware.childtrace.shared.api.ParentKeyResponse
+import com.opesware.childtrace.shared.api.TamperRequest
 import com.opesware.childtrace.shared.crypto.EnvelopeCrypto
 import com.opesware.childtrace.shared.crypto.PairingKeys
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Device
+import com.opesware.childtrace.shared.model.TamperEvent
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.serialization.json.Json as JsonFormat
@@ -55,6 +58,24 @@ class BackendClient(
         client.post(baseUrl + Endpoints.ACTIVITY) {
             contentType(ContentType.Application.Json)
             setBody(ActivityBatch(childId, sealed))
+        }
+    }
+
+    /** Reports visible tamper events (disabled services, revoked permissions) to the parent. */
+    suspend fun reportTamper(events: List<TamperEvent>) {
+        events.forEach { e ->
+            client.post(baseUrl + Endpoints.TAMPER) {
+                contentType(ContentType.Application.Json)
+                setBody(TamperRequest(e.childId, e.kind.name, e.atEpochMillis, e.detail))
+            }
+        }
+    }
+
+    /** Posts a location sample; the backend evaluates geofences and stores history. */
+    suspend fun reportLocation(latitude: Double, longitude: Double, atEpochMillis: Long, accuracyMeters: Double? = null) {
+        client.post(baseUrl + Endpoints.LOCATION) {
+            contentType(ContentType.Application.Json)
+            setBody(LocationRequest(childId, latitude, longitude, atEpochMillis, accuracyMeters))
         }
     }
 
