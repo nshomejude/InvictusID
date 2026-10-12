@@ -267,6 +267,11 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
             .map { Child(it[Children.id], it[Children.parentId], it[Children.displayName], it[Children.age]) }
     }
 
+    override fun child(childId: String): Child? = transaction(db) {
+        Children.selectAll().where { Children.id eq childId }.singleOrNull()
+            ?.let { Child(it[Children.id], it[Children.parentId], it[Children.displayName], it[Children.age]) }
+    }
+
     override fun savePushToken(parentId: String, childId: String, token: String) = transaction(db) {
         PushTokens.deleteWhere { (PushTokens.childId eq childId) and (PushTokens.token eq token) }
         PushTokens.insert {

@@ -39,7 +39,7 @@ import kotlinx.coroutines.withContext
 fun PairingScreen(
     client: BackendParentClient,
     keystore: ParentKeystore,
-    onPaired: (childId: String) -> Unit,
+    onPaired: (childId: String, parentId: String) -> Unit,
 ) {
     var code by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -77,7 +77,7 @@ fun PairingScreen(
                         }
                     }
                     busy = false
-                    result.onSuccess { onPaired(it.childId) }
+                    result.onSuccess { onPaired(it.childId, it.parentId) }
                         .onFailure { error = "That code didn't work. Check it with the agent and try again." }
                 }
             },

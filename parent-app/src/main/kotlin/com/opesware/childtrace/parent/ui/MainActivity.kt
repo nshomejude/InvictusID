@@ -2,6 +2,7 @@ package com.opesware.childtrace.parent.ui
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
 import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -17,6 +18,7 @@ import kotlinx.coroutines.withContext
 import com.opesware.childtrace.parent.ParentApplication
 import com.opesware.childtrace.parent.data.BackendParentRepository
 import com.opesware.childtrace.design.theme.ChildTraceTheme
+import com.opesware.childtrace.shared.api.ChildSummary
 import com.opesware.childtrace.shared.model.AgeBand
 
 /**
@@ -37,17 +39,27 @@ class MainActivity : FragmentActivity() {
 
                 when {
                     !authed -> AuthGate(onUnlock = { promptBiometric { authed = true } })
-                    childId == null -> PairingScreen(app.client, app.keystore) { paired ->
+                    childId == null -> PairingScreen(app.client, app.keystore) { paired, parent ->
                         app.pairedChildId = paired
+                        app.parentId = parent
                         childId = paired
                     }
                     else -> {
+                        // Load the parent's children once, for the multi-child switcher.
+                        var children by remember { mutableStateOf<List<ChildSummary>>(emptyList()) }
+                        LaunchedEffect(app.parentId) {
+                            app.parentId?.let { pid ->
+                                runCatching { withContext(Dispatchers.IO) { app.client.children(pid) } }
+                                    .onSuccess { children = it }
+                            }
+                        }
+
                         // Backed by the real backend once paired; a ViewModel would
                         // own refresh() in production. Band is resolved at pairing.
                         val repo = remember(childId) {
                             BackendParentRepository(
                                 childId = childId!!,
-                                displayName = childId!!,
+                                displayName = children.firstOrNull { c -> c.childId == childId }?.displayName ?: childId!!,
                                 band = AgeBand.FLAG_HIGH,
                                 client = app.client,
                                 keystore = app.keystore,
@@ -58,8 +70,14 @@ class MainActivity : FragmentActivity() {
                             runCatching { withContext(Dispatchers.IO) { repo.registerKey(); repo.refresh() } }
                             loaded++
                         }
-                        // Re-read the now-populated cache once the refresh completes.
-                        key(loaded) { ParentConsole(repo) }
+                        Column {
+                            ChildSwitcher(children, childId!!) { selected ->
+                                app.pairedChildId = selected
+                                childId = selected
+                            }
+                            // Re-read the now-populated cache once the refresh completes.
+                            key(loaded) { ParentConsole(repo) }
+                        }
                     }
                 }
             }

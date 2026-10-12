@@ -100,6 +100,7 @@ class InMemoryStore : Store {
     override fun saveChild(child: Child) { children[child.id] = child }
     override fun childrenOf(parentId: String): List<Child> =
         children.values.filter { it.parentId == parentId }.sortedBy { it.displayName }
+    override fun child(childId: String): Child? = children[childId]
 
     override fun savePushToken(parentId: String, childId: String, token: String) {
         pushTokens.getOrPut(childId) { mutableSetOf() }.add(token)

@@ -18,4 +18,9 @@ class ParentApplication : Application() {
     var pairedChildId: String?
         get() = prefs.getString("child_id", null)
         set(value) { prefs.edit().putString("child_id", value).apply() }
+
+    /** The parent account id (shared across the parent's children). */
+    var parentId: String?
+        get() = prefs.getString("parent_id", null)
+        set(value) { prefs.edit().putString("parent_id", value).apply() }
 }

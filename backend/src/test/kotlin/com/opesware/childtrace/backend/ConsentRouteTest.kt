@@ -28,7 +28,7 @@ class ConsentRouteTest {
             contentType(ContentType.Application.Json)
             setBody(
                 """{"childId":"c1","childAge":11,"buyerName":"A Parent","buyerAge":42,
-                   "guardianshipProofRef":"doc-1","signedCertificateRef":"cert-1"}"""
+                   "guardianshipProofRef":"doc-1","signedCertificateRef":"cert-1","parentId":"p1"}"""
             )
         }
         assertEquals(HttpStatusCode.Created, res.status)
@@ -42,7 +42,7 @@ class ConsentRouteTest {
             contentType(ContentType.Application.Json)
             setBody(
                 """{"childId":"c2","childAge":16,"buyerName":"A Parent","buyerAge":42,
-                   "guardianshipProofRef":"doc-2","signedCertificateRef":"cert-2"}"""
+                   "guardianshipProofRef":"doc-2","signedCertificateRef":"cert-2","parentId":"p1"}"""
             )
         }
         assertEquals(HttpStatusCode.UnprocessableEntity, res.status)

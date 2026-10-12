@@ -66,7 +66,8 @@ fun Route.pairingFlowRoutes(store: Store, config: Provisioning.Config = Provisio
             is Provisioning.Result.Allowed -> r.band.name
             is Provisioning.Result.Refused -> throw ProvisioningRefusedException(r.reason)
         }
-        call.respond(ClaimPairingResponse(session.childId, band))
+        val parentId = store.child(session.childId)?.parentId ?: ""
+        call.respond(ClaimPairingResponse(session.childId, band, parentId))
     }
 }
 
