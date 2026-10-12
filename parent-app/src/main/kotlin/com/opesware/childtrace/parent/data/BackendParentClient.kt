@@ -1,11 +1,16 @@
 package com.opesware.childtrace.parent.data
 
+import com.opesware.childtrace.shared.api.ChildSummary
 import com.opesware.childtrace.shared.api.ClaimPairingRequest
 import com.opesware.childtrace.shared.api.ClaimPairingResponse
 import com.opesware.childtrace.shared.api.Endpoints
 import com.opesware.childtrace.shared.api.ParentKeyRequest
+import com.opesware.childtrace.shared.api.PushTokenRequest
+import com.opesware.childtrace.shared.engine.WeeklyDigest
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.Geofence
+import com.opesware.childtrace.shared.model.TamperEvent
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
@@ -50,6 +55,27 @@ class BackendParentClient(
 
     suspend fun activity(childId: String): List<ActivityRecord> =
         client.get(baseUrl + Endpoints.childActivity(childId)).body()
+
+    /** The parent's child profiles, for the multi-child switcher. */
+    suspend fun children(parentId: String): List<ChildSummary> =
+        client.get(baseUrl + Endpoints.parentChildren(parentId)).body()
+
+    /** Register this device's FCM token so critical flags push in real time. */
+    suspend fun registerPushToken(parentId: String, childId: String, token: String) {
+        client.post(baseUrl + Endpoints.PUSH_TOKEN) {
+            contentType(ContentType.Application.Json)
+            setBody(PushTokenRequest(parentId, childId, token))
+        }
+    }
+
+    suspend fun digest(childId: String): WeeklyDigest =
+        client.get(baseUrl + Endpoints.childDigest(childId)).body()
+
+    suspend fun geofences(childId: String): List<Geofence> =
+        client.get(baseUrl + Endpoints.childGeofences(childId)).body()
+
+    suspend fun tamperEvents(childId: String): List<TamperEvent> =
+        client.get(baseUrl + Endpoints.childTamper(childId)).body()
 
     companion object {
         fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {

@@ -48,6 +48,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.androidx.biometric)
+    implementation(libs.firebase.messaging)
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
