@@ -29,7 +29,7 @@ class OnboardingFlowTest {
         val consent = client.post("/api/v1/consent") {
             contentType(ContentType.Application.Json)
             setBody("""{"childId":"c1","childAge":11,"buyerName":"Parent","buyerAge":42,
-                       "guardianshipProofRef":"d","signedCertificateRef":"c"}""")
+                       "guardianshipProofRef":"d","signedCertificateRef":"c","parentId":"p1"}""")
         }
         assertEquals(HttpStatusCode.Created, consent.status)
 

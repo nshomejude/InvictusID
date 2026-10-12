@@ -156,6 +156,15 @@ fun Route.consentRoutes(store: Store, config: Provisioning.Config = Provisioning
                     childAgeAtProvisioning = req.childAge,
                 )
                 store.saveConsent(record)
+                // Register the child under its parent account (multi-child).
+                store.saveChild(
+                    com.opesware.childtrace.shared.model.Child(
+                        id = req.childId,
+                        parentId = req.parentId,
+                        displayName = req.childDisplayName,
+                        age = req.childAge,
+                    )
+                )
                 store.recordAccess(audit(call, AuditAction.WRITE, AuditResource.CONSENT, req.childId))
                 call.respond(HttpStatusCode.Created, mapOf("band" to result.band.name, "childId" to req.childId))
             }

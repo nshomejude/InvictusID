@@ -62,6 +62,8 @@ interface Store {
     fun saveChild(child: Child)
     /** All child profiles for a parent, for the multi-child switcher. */
     fun childrenOf(parentId: String): List<Child>
+    /** One child profile by id (to resolve its parent account). */
+    fun child(childId: String): Child?
 
     /** Store/replace the parent's FCM push token for a child; tokens are per child. */
     fun savePushToken(parentId: String, childId: String, token: String)

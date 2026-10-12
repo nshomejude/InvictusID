@@ -24,6 +24,10 @@ data class ConsentRequest(
     val buyerAge: Int,
     val guardianshipProofRef: String,
     val signedCertificateRef: String,
+    /** The parent account this child belongs to, so siblings share one account. */
+    val parentId: String,
+    /** Display name for the child in the parent's switcher (e.g. a first name). */
+    val childDisplayName: String = childId,
 )
 
 /**
@@ -57,7 +61,7 @@ data class PairingSessionResponse(
 data class ClaimPairingRequest(val code: String, val keyId: String, val publicKeySpki: String)
 
 @Serializable
-data class ClaimPairingResponse(val childId: String, val band: String)
+data class ClaimPairingResponse(val childId: String, val band: String, val parentId: String)
 
 @Serializable
 data class AlertBatch(val childId: String, val alerts: List<Alert>)
