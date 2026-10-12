@@ -17,4 +17,4 @@ data class AuditEntry(
 
 enum class AuditAction { READ, WRITE }
 
-enum class AuditResource { ALERT, ACTIVITY, CONSENT, DEVICE }
+enum class AuditResource { ALERT, ACTIVITY, CONSENT, DEVICE, MEDIA }

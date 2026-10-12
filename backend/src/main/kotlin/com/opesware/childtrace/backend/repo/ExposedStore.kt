@@ -1,15 +1,21 @@
 package com.opesware.childtrace.backend.repo
 
+import com.opesware.childtrace.shared.api.MediaRef
+import com.opesware.childtrace.shared.api.SealedMediaResponse
+import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.ActivityType
 import com.opesware.childtrace.shared.model.Alert
 import com.opesware.childtrace.shared.model.AlertStatus
+import com.opesware.childtrace.shared.model.CapturedMedia
 import com.opesware.childtrace.shared.model.Child
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
 import com.opesware.childtrace.shared.model.Geofence
 import com.opesware.childtrace.shared.model.GeofenceTrigger
 import com.opesware.childtrace.shared.model.LocationSample
+import com.opesware.childtrace.shared.model.MediaKind
+import com.opesware.childtrace.shared.model.MediaTrigger
 import com.opesware.childtrace.shared.model.RiskCategory
 import com.opesware.childtrace.shared.model.Severity
 import com.opesware.childtrace.shared.model.TamperEvent
@@ -50,7 +56,7 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         transaction(db) {
             SchemaUtils.createMissingTablesAndColumns(
                 Devices, Consents, Alerts, Activities, AuditLog, ParentKeys, PairingSessions,
-                Children, PushTokens, Geofences, Locations, TamperEvents,
+                Children, PushTokens, Geofences, Locations, TamperEvents, MediaItems,
             )
         }
     }
@@ -216,6 +222,55 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
             )
     }
 
+    override fun addMedia(media: CapturedMedia, envelope: SealedEnvelope) = transaction(db) {
+        MediaItems.deleteWhere { MediaItems.id eq media.id }
+        MediaItems.insert {
+            it[id] = media.id
+            it[childId] = media.childId
+            it[kind] = media.kind.name
+            it[trigger] = media.trigger.name
+            it[alertId] = media.alertId
+            it[mimeType] = media.mimeType
+            it[capturedAt] = media.capturedAtEpochMillis
+            it[keyId] = envelope.keyId
+            it[wrappedKey] = envelope.wrappedKey
+            it[iv] = envelope.iv
+            it[ciphertext] = envelope.ciphertext
+        }
+        Unit
+    }
+
+    override fun mediaRefs(childId: String): List<MediaRef> = transaction(db) {
+        MediaItems.selectAll().where { MediaItems.childId eq childId }
+            .orderBy(MediaItems.capturedAt to SortOrder.DESC)
+            .map { MediaRef(rowToMedia(it), it[MediaItems.keyId]) }
+    }
+
+    override fun media(childId: String, mediaId: String): SealedMediaResponse? = transaction(db) {
+        MediaItems.selectAll().where { (MediaItems.childId eq childId) and (MediaItems.id eq mediaId) }
+            .singleOrNull()?.let {
+                SealedMediaResponse(
+                    media = rowToMedia(it),
+                    envelope = SealedEnvelope(
+                        keyId = it[MediaItems.keyId],
+                        wrappedKey = it[MediaItems.wrappedKey],
+                        iv = it[MediaItems.iv],
+                        ciphertext = it[MediaItems.ciphertext],
+                    ),
+                )
+            }
+    }
+
+    private fun rowToMedia(it: org.jetbrains.exposed.sql.ResultRow) = CapturedMedia(
+        id = it[MediaItems.id],
+        childId = it[MediaItems.childId],
+        kind = MediaKind.valueOf(it[MediaItems.kind]),
+        trigger = MediaTrigger.valueOf(it[MediaItems.trigger]),
+        alertId = it[MediaItems.alertId],
+        mimeType = it[MediaItems.mimeType],
+        capturedAtEpochMillis = it[MediaItems.capturedAt],
+    )
+
     override fun recordAccess(entry: AuditEntry) = transaction(db) {
         AuditLog.insert {
             it[at] = entry.atEpochMillis
@@ -247,7 +302,8 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         val a = Alerts.deleteWhere { Alerts.createdAt less cutoffEpochMillis }
         val b = Activities.deleteWhere { Activities.createdAt less cutoffEpochMillis }
         val c = Locations.deleteWhere { Locations.at less cutoffEpochMillis }
-        a + b + c
+        val d = MediaItems.deleteWhere { MediaItems.capturedAt less cutoffEpochMillis }
+        a + b + c + d
     }
 
     override fun saveChild(child: Child) = transaction(db) {

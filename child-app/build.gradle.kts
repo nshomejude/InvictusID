@@ -16,6 +16,13 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        // Explicit parent-triggered screen capture is a counsel-gated capability
+        // (CLAUDE.md invariant 5/7), refused by default. Flipping this to true is
+        // a deliberate, reviewed build decision — never the shipping default. It
+        // never enables covert capture: MediaProjection's system consent and
+        // recording indicator always apply (invariant 1).
+        buildConfigField("boolean", "ALLOW_SCREEN_CAPTURE", "false")
     }
 
     buildTypes {
@@ -30,7 +37,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 dependencies {

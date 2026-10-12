@@ -89,6 +89,12 @@ Two feeds work together:
 
 A **foreground service** keeps capture alive against Android's background limits, with a persistent notification — which doubles as honest disclosure that the app is running.
 
+**Visual evidence (screenshots / images).** Beyond text, the device can capture a screenshot as the visual context of danger, under a strict guard (`shared/engine/MediaPolicy`) that both the device and the backend enforce:
+
+- **Flagged-media only.** A capture is permitted only when it is tied to an alert the on-device risk engine already raised, at or above a severity floor (default HIGH). There is deliberately no path that sweeps the camera roll or the message inbox — media without a linked, high-enough alert is refused.
+- **Explicit screen capture is visible and counsel-gated.** A parent-requested screenshot runs through the platform **MediaProjection** API: the child grants it through a system consent dialog, the OS shows its recording indicator while the projection is held, and the child app never suppresses it (invariant 1). It takes **one frame per request** — there is no continuous recording loop. The capability is refused unless the deployment turns it on (`CHILDTRACE_ALLOW_SCREEN_CAPTURE` / `BuildConfig.ALLOW_SCREEN_CAPTURE`), standing in for counsel sign-off (invariants 5/7). The child-app disclosure screen states that screen capture is part of the monitoring.
+- **Sealed to the parent, viewed in-app.** Captured bytes are envelope-sealed to the parent's key on-device, stored opaquely by the backend, and decrypted **only in the parent app** (invariant 3). There is no server-side decryption and no web-admin view of the plaintext.
+
 **The honest limitation, stated plainly:** this is _capture-at-display_. ChildTrace sees messages from the moment it is installed forward; it cannot retrieve history sent before install, and it cannot read a message the child never opens. Marketing must never claim "reads all messages on any app" — that claim is false and is exactly what reclassifies a child-safety app as spyware.
 
 ## On-device risk engine

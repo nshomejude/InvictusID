@@ -4,8 +4,11 @@ import com.opesware.childtrace.shared.api.ChildSummary
 import com.opesware.childtrace.shared.api.ClaimPairingRequest
 import com.opesware.childtrace.shared.api.ClaimPairingResponse
 import com.opesware.childtrace.shared.api.Endpoints
+import com.opesware.childtrace.shared.api.MediaListResponse
+import com.opesware.childtrace.shared.api.MediaRef
 import com.opesware.childtrace.shared.api.ParentKeyRequest
 import com.opesware.childtrace.shared.api.PushTokenRequest
+import com.opesware.childtrace.shared.api.SealedMediaResponse
 import com.opesware.childtrace.shared.engine.WeeklyDigest
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
@@ -76,6 +79,14 @@ class BackendParentClient(
 
     suspend fun tamperEvents(childId: String): List<TamperEvent> =
         client.get(baseUrl + Endpoints.childTamper(childId)).body()
+
+    /** Lists a child's captured media (metadata only — no ciphertext). */
+    suspend fun mediaRefs(childId: String): List<MediaRef> =
+        client.get(baseUrl + Endpoints.childMedia(childId)).body<MediaListResponse>().items
+
+    /** Fetches one sealed media item; the parent decrypts it locally. */
+    suspend fun media(childId: String, mediaId: String): SealedMediaResponse =
+        client.get(baseUrl + Endpoints.childMediaItem(childId, mediaId)).body()
 
     companion object {
         fun defaultClient(host: String = "api.childtrace.example"): HttpClient = HttpClient(OkHttp) {

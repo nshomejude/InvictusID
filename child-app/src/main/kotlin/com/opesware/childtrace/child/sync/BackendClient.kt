@@ -3,12 +3,14 @@ package com.opesware.childtrace.child.sync
 import com.opesware.childtrace.shared.api.ActivityBatch
 import com.opesware.childtrace.shared.api.Endpoints
 import com.opesware.childtrace.shared.api.LocationRequest
+import com.opesware.childtrace.shared.api.MediaUploadRequest
 import com.opesware.childtrace.shared.api.PairRequest
 import com.opesware.childtrace.shared.api.ParentKeyResponse
 import com.opesware.childtrace.shared.api.TamperRequest
 import com.opesware.childtrace.shared.crypto.EnvelopeCrypto
 import com.opesware.childtrace.shared.crypto.PairingKeys
 import com.opesware.childtrace.shared.model.ActivityRecord
+import com.opesware.childtrace.shared.model.CapturedMedia
 import com.opesware.childtrace.shared.model.Device
 import com.opesware.childtrace.shared.model.TamperEvent
 import io.ktor.client.call.body
@@ -76,6 +78,25 @@ class BackendClient(
         client.post(baseUrl + Endpoints.LOCATION) {
             contentType(ContentType.Application.Json)
             setBody(LocationRequest(childId, latitude, longitude, atEpochMillis, accuracyMeters))
+        }
+    }
+
+    /**
+     * Seals one piece of captured media's [bytes] to the parent's public key and
+     * uploads it. Only the paired parent can decrypt it; the backend stores the
+     * ciphertext and re-checks the capture justification against MediaPolicy.
+     *
+     * The caller is responsible for having already passed MediaPolicy on-device
+     * (see the capture layer): no bulk collection, flagged media tied to a real
+     * alert, explicit screen capture only through the visible MediaProjection
+     * path. This method just performs the seal + transport.
+     */
+    suspend fun uploadMedia(media: CapturedMedia, bytes: ByteArray) {
+        val parentKey = fetchParentPublicKey()
+        val envelope = EnvelopeCrypto.seal(bytes, parentKey)
+        client.post(baseUrl + Endpoints.MEDIA) {
+            contentType(ContentType.Application.Json)
+            setBody(MediaUploadRequest(media = media, envelope = envelope))
         }
     }
 

@@ -1,8 +1,12 @@
 package com.opesware.childtrace.backend.repo
 
+import com.opesware.childtrace.shared.api.MediaRef
+import com.opesware.childtrace.shared.api.SealedMediaResponse
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
 import com.opesware.childtrace.shared.model.Child
+import com.opesware.childtrace.shared.model.CapturedMedia
+import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
 import com.opesware.childtrace.shared.model.Geofence
@@ -43,6 +47,17 @@ interface Store {
     fun addActivity(childId: String, items: List<ActivityRecord>)
     /** Activity for a child, flagged items first then most recent. */
     fun activity(childId: String): List<ActivityRecord>
+
+    /**
+     * Store one piece of captured media. The bytes are already envelope-sealed
+     * to the parent; the server keeps [envelope] opaque and cannot read it.
+     * Scoped to the one child, like everything else.
+     */
+    fun addMedia(media: CapturedMedia, envelope: SealedEnvelope)
+    /** Metadata of a child's media, most recent first (no ciphertext). */
+    fun mediaRefs(childId: String): List<MediaRef>
+    /** The full sealed item for one media id, or null if not found for this child. */
+    fun media(childId: String, mediaId: String): SealedMediaResponse?
 
     /** Append an access-audit entry (invariant 3). */
     fun recordAccess(entry: AuditEntry)

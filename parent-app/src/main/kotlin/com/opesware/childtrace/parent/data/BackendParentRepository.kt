@@ -5,6 +5,7 @@ import com.opesware.childtrace.shared.crypto.SealedEnvelope
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.AgeBand
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.MediaTrigger
 import com.opesware.childtrace.shared.model.Policy
 import com.opesware.childtrace.shared.model.Severity
 import kotlinx.serialization.json.Json
@@ -51,6 +52,29 @@ class BackendParentRepository(
             ?: return "[encrypted with a previous key — unavailable on this device]"
         return runCatching { EnvelopeCrypto.openToString(envelope, privateKey) }
             .getOrDefault("[could not decrypt]")
+    }
+
+    override suspend fun mediaList(): List<MediaItemUi> =
+        client.mediaRefs(childId).map { ref ->
+            val m = ref.media
+            MediaItemUi(
+                id = m.id,
+                kindLabel = m.kind.name.lowercase().replaceFirstChar { it.uppercase() },
+                reason = when (m.trigger) {
+                    MediaTrigger.FLAGGED_ALERT -> "Captured with a safety alert"
+                    MediaTrigger.PARENT_REQUESTED_SCREEN -> "Screenshot you requested"
+                },
+                mimeType = m.mimeType,
+                capturedAtEpochMillis = m.capturedAtEpochMillis,
+                // We can open it only if the private key it was sealed to is still here.
+                openableOnThisDevice = keystore.privateKeyOrNull(ref.keyId) != null,
+            )
+        }
+
+    override suspend fun openMedia(mediaId: String): ByteArray? {
+        val sealed = runCatching { client.media(childId, mediaId) }.getOrNull() ?: return null
+        val privateKey = keystore.privateKeyOrNull(sealed.envelope.keyId) ?: return null
+        return runCatching { EnvelopeCrypto.open(sealed.envelope, privateKey) }.getOrNull()
     }
 
     override fun childName() = displayName
