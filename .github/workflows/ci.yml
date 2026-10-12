@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Core engine + backend — no Android SDK needed. This is the fast gate.
+  jvm:
+    name: shared + backend (JDK 17)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test shared + backend
+        run: ./gradlew :shared:test :backend:test --no-daemon --stacktrace
+      - name: Build backend distribution
+        run: ./gradlew :backend:installDist --no-daemon
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-reports
+          path: |
+            shared/build/reports/tests/
+            backend/build/reports/tests/
+          if-no-files-found: ignore
+
+  # Android modules — require the SDK, which this job provides. The modules
+  # auto-wire into the build once ANDROID_HOME is set (see settings.gradle.kts).
+  android:
+    name: android apps (assembleDebug)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Assemble debug APKs
+        run: ./gradlew :child-app:assembleDebug :parent-app:assembleDebug :agent-app:assembleDebug --no-daemon --stacktrace
+
+  # Backend container builds from the Dockerfile.
+  docker:
+    name: backend image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile -t childtrace-backend:ci .
