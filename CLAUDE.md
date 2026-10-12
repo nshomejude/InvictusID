@@ -53,7 +53,9 @@ The UI reference lives in the design mockups (see the artifact linked from the s
 
 ## Status
 
-Phase 1 in progress. Done: Gradle multi-module scaffold, the `shared` core (domain model + on-device risk engine + provisioning guard) with passing unit tests, and the UI design mockups. Next: `child-app` capture services + analyzer wiring, `parent-app` Compose shell (alert feed, activity-by-app, controls), and the Ktor `backend`.
+Phase 1 complete (on `main`): shared core, child-app, parent-app, agent-app, backend, design system — end to end, with 42 JVM tests green. Phase 2 (advanced features) in review on `claude/phase2-advanced-features`: multi-child data layer, real-time FCM critical push, geofencing + location history, screen-time enforcement (device-admin), self-harm escalation resources, on-device ML classifier seam, weekly digest, and visible tamper-resilience. Backend fully tested; Android pieces build with the SDK.
+
+Open follow-ups: multi-child switcher UI (needs a parent-account identity at pairing), Google Fonts assets, real TLS pins, FCM google-services.json, Android instrumentation tests, Cameroon counsel sign-off (invariant 7).
 
 ## Working notes for Claude Code
 

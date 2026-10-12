@@ -4,10 +4,16 @@ import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.ActivityType
 import com.opesware.childtrace.shared.model.Alert
 import com.opesware.childtrace.shared.model.AlertStatus
+import com.opesware.childtrace.shared.model.Child
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
+import com.opesware.childtrace.shared.model.Geofence
+import com.opesware.childtrace.shared.model.GeofenceTrigger
+import com.opesware.childtrace.shared.model.LocationSample
 import com.opesware.childtrace.shared.model.RiskCategory
 import com.opesware.childtrace.shared.model.Severity
+import com.opesware.childtrace.shared.model.TamperEvent
+import com.opesware.childtrace.shared.model.TamperKind
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
@@ -42,7 +48,10 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
         }
         db = Database.connect(HikariDataSource(cfg))
         transaction(db) {
-            SchemaUtils.createMissingTablesAndColumns(Devices, Consents, Alerts, Activities, AuditLog, ParentKeys, PairingSessions)
+            SchemaUtils.createMissingTablesAndColumns(
+                Devices, Consents, Alerts, Activities, AuditLog, ParentKeys, PairingSessions,
+                Children, PushTokens, Geofences, Locations, TamperEvents,
+            )
         }
     }
 
@@ -237,6 +246,102 @@ class ExposedStore(jdbcUrl: String, user: String, password: String) : Store {
     override fun pruneOlderThan(cutoffEpochMillis: Long): Int = transaction(db) {
         val a = Alerts.deleteWhere { Alerts.createdAt less cutoffEpochMillis }
         val b = Activities.deleteWhere { Activities.createdAt less cutoffEpochMillis }
-        a + b
+        val c = Locations.deleteWhere { Locations.at less cutoffEpochMillis }
+        a + b + c
+    }
+
+    override fun saveChild(child: Child) = transaction(db) {
+        Children.deleteWhere { Children.id eq child.id }
+        Children.insert {
+            it[id] = child.id
+            it[parentId] = child.parentId
+            it[displayName] = child.displayName
+            it[age] = child.age
+        }
+        Unit
+    }
+
+    override fun childrenOf(parentId: String): List<Child> = transaction(db) {
+        Children.selectAll().where { Children.parentId eq parentId }
+            .orderBy(Children.displayName to SortOrder.ASC)
+            .map { Child(it[Children.id], it[Children.parentId], it[Children.displayName], it[Children.age]) }
+    }
+
+    override fun savePushToken(parentId: String, childId: String, token: String) = transaction(db) {
+        PushTokens.deleteWhere { (PushTokens.childId eq childId) and (PushTokens.token eq token) }
+        PushTokens.insert {
+            it[PushTokens.childId] = childId
+            it[PushTokens.token] = token
+            it[PushTokens.parentId] = parentId
+        }
+        Unit
+    }
+
+    override fun pushTokensFor(childId: String): List<String> = transaction(db) {
+        PushTokens.selectAll().where { PushTokens.childId eq childId }.map { it[PushTokens.token] }
+    }
+
+    override fun saveGeofence(fence: Geofence) = transaction(db) {
+        Geofences.deleteWhere { Geofences.id eq fence.id }
+        Geofences.insert {
+            it[id] = fence.id
+            it[childId] = fence.childId
+            it[label] = fence.label
+            it[latitude] = fence.latitude
+            it[longitude] = fence.longitude
+            it[radiusMeters] = fence.radiusMeters
+            it[trigger] = fence.trigger.name
+        }
+        Unit
+    }
+
+    override fun geofences(childId: String): List<Geofence> = transaction(db) {
+        Geofences.selectAll().where { Geofences.childId eq childId }.map {
+            Geofence(
+                it[Geofences.id], it[Geofences.childId], it[Geofences.label],
+                it[Geofences.latitude], it[Geofences.longitude], it[Geofences.radiusMeters],
+                GeofenceTrigger.valueOf(it[Geofences.trigger]),
+            )
+        }
+    }
+
+    override fun addLocation(sample: LocationSample) = transaction(db) {
+        Locations.insert {
+            it[childId] = sample.childId
+            it[latitude] = sample.latitude
+            it[longitude] = sample.longitude
+            it[at] = sample.atEpochMillis
+            it[accuracyMeters] = sample.accuracyMeters
+        }
+        Unit
+    }
+
+    override fun lastLocation(childId: String): LocationSample? = transaction(db) {
+        Locations.selectAll().where { Locations.childId eq childId }
+            .orderBy(Locations.at to SortOrder.DESC).limit(1).singleOrNull()?.let {
+                LocationSample(it[Locations.childId], it[Locations.latitude], it[Locations.longitude], it[Locations.at], it[Locations.accuracyMeters])
+            }
+    }
+
+    override fun locations(childId: String): List<LocationSample> = transaction(db) {
+        Locations.selectAll().where { Locations.childId eq childId }
+            .orderBy(Locations.at to SortOrder.DESC)
+            .map { LocationSample(it[Locations.childId], it[Locations.latitude], it[Locations.longitude], it[Locations.at], it[Locations.accuracyMeters]) }
+    }
+
+    override fun addTamper(event: TamperEvent) = transaction(db) {
+        TamperEvents.insert {
+            it[childId] = event.childId
+            it[kind] = event.kind.name
+            it[at] = event.atEpochMillis
+            it[detail] = event.detail
+        }
+        Unit
+    }
+
+    override fun tamperEvents(childId: String): List<TamperEvent> = transaction(db) {
+        TamperEvents.selectAll().where { TamperEvents.childId eq childId }
+            .orderBy(TamperEvents.at to SortOrder.DESC)
+            .map { TamperEvent(it[TamperEvents.childId], TamperKind.valueOf(it[TamperEvents.kind]), it[TamperEvents.at], it[TamperEvents.detail]) }
     }
 }

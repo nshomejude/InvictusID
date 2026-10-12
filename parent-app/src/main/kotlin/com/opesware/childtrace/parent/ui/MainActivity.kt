@@ -1,8 +1,8 @@
 package com.opesware.childtrace.parent.ui
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +24,7 @@ import com.opesware.childtrace.shared.model.AgeBand
  * expose a child's alerts. On successful auth it shows the console; the control
  * actions are the parent's alone.
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

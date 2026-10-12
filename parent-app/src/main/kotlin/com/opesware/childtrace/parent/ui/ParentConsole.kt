@@ -51,6 +51,7 @@ import com.opesware.childtrace.design.theme.Motion
 import com.opesware.childtrace.design.theme.criticalPulseAlpha
 import com.opesware.childtrace.design.theme.severityColors
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.SafetyResources
 import com.opesware.childtrace.shared.model.Severity
 
 @Composable
@@ -134,6 +135,16 @@ private fun AlertCard(alert: Alert, modifier: Modifier = Modifier) {
             Text(alert.category.label, fontWeight = FontWeight.SemiBold)
             Text(alert.contextSnippet, fontSize = 13.sp)
             Text(alert.sourceApp, fontSize = 11.sp)
+            // Escalation resources for serious categories (self-harm, exploitation).
+            SafetyResources.forCategory(alert.category).firstOrNull()?.let { res ->
+                Card {
+                    Column(Modifier.padding(10.dp)) {
+                        Text(res.title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(res.description, fontSize = 11.sp)
+                        Text(res.contact, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
         }
     }
 }

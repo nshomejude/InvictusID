@@ -68,6 +68,35 @@ data class ActivityBatch(val childId: String, val activity: List<ActivityRecord>
 @Serializable
 data class AcceptedResponse(val accepted: Int)
 
+// --- Phase 2 ---
+
+/** A child summary row for the parent's multi-child switcher. */
+@Serializable
+data class ChildSummary(val childId: String, val displayName: String, val band: String)
+
+/** Parent registers/updates an FCM device token to receive critical pushes. */
+@Serializable
+data class PushTokenRequest(val parentId: String, val childId: String, val token: String)
+
+/** Child device posts a location sample; the backend evaluates geofences. */
+@Serializable
+data class LocationRequest(
+    val childId: String,
+    val latitude: Double,
+    val longitude: Double,
+    val atEpochMillis: Long,
+    val accuracyMeters: Double? = null,
+)
+
+/** Child device reports a tamper event (service disabled, permission revoked). */
+@Serializable
+data class TamperRequest(
+    val childId: String,
+    val kind: String,
+    val atEpochMillis: Long,
+    val detail: String? = null,
+)
+
 object Endpoints {
     const val HEALTH = "/api/v1/health"
     const val PAIR = "/api/v1/devices/pair"
@@ -77,7 +106,15 @@ object Endpoints {
     const val PARENT_KEY = "/api/v1/parent-key"
     const val PAIRING_SESSIONS = "/api/v1/pairing-sessions"
     const val PAIRING_CLAIM = "/api/v1/pairing-sessions/claim"
+    const val PUSH_TOKEN = "/api/v1/push-token"
+    const val LOCATION = "/api/v1/location"
+    const val TAMPER = "/api/v1/tamper"
     fun childAlerts(childId: String) = "/api/v1/children/$childId/alerts"
     fun childActivity(childId: String) = "/api/v1/children/$childId/activity"
     fun parentKey(childId: String) = "/api/v1/children/$childId/parent-key"
+    fun parentChildren(parentId: String) = "/api/v1/parents/$parentId/children"
+    fun childGeofences(childId: String) = "/api/v1/children/$childId/geofences"
+    fun childLocations(childId: String) = "/api/v1/children/$childId/locations"
+    fun childTamper(childId: String) = "/api/v1/children/$childId/tamper"
+    fun childDigest(childId: String) = "/api/v1/children/$childId/digest"
 }
