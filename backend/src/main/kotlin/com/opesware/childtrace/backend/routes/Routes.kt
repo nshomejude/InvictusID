@@ -62,11 +62,19 @@ fun Route.pairingRoutes(store: Store) {
 private fun ApplicationCall.actor(): String = request.headers["X-Actor"] ?: "unknown"
 
 /** Child device pushes flagged alerts; parent app reads the ranked feed. */
-fun Route.alertRoutes(store: Store) {
+fun Route.alertRoutes(store: Store, push: com.opesware.childtrace.backend.push.PushDispatcher? = null) {
     post(Endpoints.ALERTS) {
         val batch = call.receive<AlertBatch>()
         store.addAlerts(batch.childId, batch.alerts)
         store.recordAccess(audit(call, AuditAction.WRITE, AuditResource.ALERT, batch.childId, "${batch.alerts.size} alerts"))
+        // Real-time push for critical flags (payload carries no content).
+        if (push != null) {
+            val critical = batch.alerts.filter { it.severity == com.opesware.childtrace.shared.model.Severity.CRITICAL }
+            if (critical.isNotEmpty()) {
+                val tokens = store.pushTokensFor(batch.childId)
+                critical.forEach { push.notifyCritical(tokens, it) }
+            }
+        }
         call.respond(HttpStatusCode.Accepted, AcceptedResponse(batch.alerts.size))
     }
     get("/api/v1/children/{childId}/alerts") {

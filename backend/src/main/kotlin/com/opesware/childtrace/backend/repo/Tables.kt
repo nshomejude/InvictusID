@@ -78,6 +78,51 @@ object ParentKeys : Table("parent_keys") {
     override val primaryKey = PrimaryKey(childId, keyId)
 }
 
+object Children : Table("children") {
+    val id = varchar("id", 64)
+    val parentId = varchar("parent_id", 64).index()
+    val displayName = varchar("display_name", 256)
+    val age = integer("age")
+    override val primaryKey = PrimaryKey(id)
+}
+
+object PushTokens : Table("push_tokens") {
+    val childId = varchar("child_id", 64).index()
+    val token = varchar("token", 512)
+    val parentId = varchar("parent_id", 64)
+    override val primaryKey = PrimaryKey(childId, token)
+}
+
+object Geofences : Table("geofences") {
+    val id = varchar("id", 64)
+    val childId = varchar("child_id", 64).index()
+    val label = varchar("label", 128)
+    val latitude = double("latitude")
+    val longitude = double("longitude")
+    val radiusMeters = double("radius_meters")
+    val trigger = varchar("trigger", 8)
+    override val primaryKey = PrimaryKey(id)
+}
+
+object Locations : Table("locations") {
+    val id = long("id").autoIncrement()
+    val childId = varchar("child_id", 64).index()
+    val latitude = double("latitude")
+    val longitude = double("longitude")
+    val at = long("at")
+    val accuracyMeters = double("accuracy_meters").nullable()
+    override val primaryKey = PrimaryKey(id)
+}
+
+object TamperEvents : Table("tamper_events") {
+    val id = long("id").autoIncrement()
+    val childId = varchar("child_id", 64).index()
+    val kind = varchar("kind", 48)
+    val at = long("at")
+    val detail = varchar("detail", 512).nullable()
+    override val primaryKey = PrimaryKey(id)
+}
+
 object AuditLog : Table("audit_log") {
     val id = long("id").autoIncrement()
     val at = long("at")

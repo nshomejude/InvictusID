@@ -10,8 +10,14 @@ import com.opesware.childtrace.backend.routes.alertRoutes
 import com.opesware.childtrace.backend.routes.consentRoutes
 import com.opesware.childtrace.backend.routes.healthRoutes
 import com.opesware.childtrace.backend.routes.pairingFlowRoutes
+import com.opesware.childtrace.backend.push.LoggingPushDispatcher
+import com.opesware.childtrace.backend.routes.childrenRoutes
+import com.opesware.childtrace.backend.routes.digestRoutes
+import com.opesware.childtrace.backend.routes.locationRoutes
 import com.opesware.childtrace.backend.routes.pairingRoutes
 import com.opesware.childtrace.backend.routes.parentKeyRoutes
+import com.opesware.childtrace.backend.routes.pushTokenRoutes
+import com.opesware.childtrace.backend.routes.tamperRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -61,8 +67,13 @@ fun Application.module() {
         pairingRoutes(store)
         pairingFlowRoutes(store, provisioningConfig)
         parentKeyRoutes(store)
-        alertRoutes(store)
+        alertRoutes(store, LoggingPushDispatcher())
         activityRoutes(store)
         consentRoutes(store, provisioningConfig)
+        childrenRoutes(store)
+        pushTokenRoutes(store)
+        locationRoutes(store)
+        tamperRoutes(store)
+        digestRoutes(store)
     }
 }

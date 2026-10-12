@@ -2,9 +2,14 @@ package com.opesware.childtrace.backend.repo
 
 import com.opesware.childtrace.shared.model.ActivityRecord
 import com.opesware.childtrace.shared.model.Alert
+import com.opesware.childtrace.shared.model.Child
 import com.opesware.childtrace.shared.model.ConsentRecord
 import com.opesware.childtrace.shared.model.Device
+import com.opesware.childtrace.shared.model.Geofence
+import com.opesware.childtrace.shared.model.LocationSample
+import com.opesware.childtrace.shared.model.TamperEvent
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * A thread-safe in-memory stand-in for the PostgreSQL store, so the API runs
@@ -24,6 +29,11 @@ class InMemoryStore : Store {
     // childId -> (keyId -> spki), plus the current keyId per child.
     private val parentKeys = ConcurrentHashMap<String, MutableMap<String, String>>()
     private val currentKeyId = ConcurrentHashMap<String, String>()
+    private val children = ConcurrentHashMap<String, Child>()
+    private val pushTokens = ConcurrentHashMap<String, MutableSet<String>>()
+    private val geofences = ConcurrentHashMap<String, MutableMap<String, Geofence>>()
+    private val locations = ConcurrentHashMap<String, CopyOnWriteArrayList<LocationSample>>()
+    private val tamper = ConcurrentHashMap<String, CopyOnWriteArrayList<TamperEvent>>()
 
     override fun saveDevice(device: Device) { devices[device.id] = device }
     override fun device(id: String): Device? = devices[id]
@@ -79,6 +89,39 @@ class InMemoryStore : Store {
             list.removeAll { it.createdAtEpochMillis < cutoffEpochMillis }
             removed += before - list.size
         }
+        locations.values.forEach { list ->
+            val before = list.size
+            list.removeAll { it.atEpochMillis < cutoffEpochMillis }
+            removed += before - list.size
+        }
         return removed
     }
+
+    override fun saveChild(child: Child) { children[child.id] = child }
+    override fun childrenOf(parentId: String): List<Child> =
+        children.values.filter { it.parentId == parentId }.sortedBy { it.displayName }
+
+    override fun savePushToken(parentId: String, childId: String, token: String) {
+        pushTokens.getOrPut(childId) { mutableSetOf() }.add(token)
+    }
+    override fun pushTokensFor(childId: String): List<String> = pushTokens[childId].orEmpty().toList()
+
+    override fun saveGeofence(fence: Geofence) {
+        geofences.getOrPut(fence.childId) { mutableMapOf() }[fence.id] = fence
+    }
+    override fun geofences(childId: String): List<Geofence> = geofences[childId]?.values?.toList().orEmpty()
+
+    override fun addLocation(sample: LocationSample) {
+        locations.getOrPut(sample.childId) { CopyOnWriteArrayList() }.add(sample)
+    }
+    override fun lastLocation(childId: String): LocationSample? =
+        locations[childId]?.maxByOrNull { it.atEpochMillis }
+    override fun locations(childId: String): List<LocationSample> =
+        locations[childId].orEmpty().sortedByDescending { it.atEpochMillis }
+
+    override fun addTamper(event: TamperEvent) {
+        tamper.getOrPut(event.childId) { CopyOnWriteArrayList() }.add(event)
+    }
+    override fun tamperEvents(childId: String): List<TamperEvent> =
+        tamper[childId].orEmpty().sortedByDescending { it.atEpochMillis }
 }
